@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { differenceInDays, parseISO, format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { Package, AlertTriangle, TrendingDown, Edit2, Check, X } from 'lucide-react'
+import { Package, TrendingDown, Edit2, Check, X } from 'lucide-react'
 import type { Product } from '../lib/supabase'
 import { useProducts, IS_CONFIGURED } from '../hooks/useData'
 import * as db from '../lib/db'
@@ -139,7 +139,8 @@ export default function Estoque() {
           const valorTotal = p.quantity * precoFinal
           const maxQty = [42048, 33552, 5064, 6624]
           const idx = products.indexOf(p)
-          const pctEstoque = Math.min(100, (p.quantity / (maxQty[idx] ?? p.quantity || 1)) * 100)
+          const baseQty = maxQty[idx] ?? (p.quantity || 1)
+          const pctEstoque = Math.min(100, (p.quantity / baseQty) * 100)
 
           return (
             <div key={p.id} className={`bg-white rounded-xl border ${colors.border} p-5`}>

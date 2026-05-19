@@ -122,7 +122,7 @@ export default function Dashboard() {
                 <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
                   <div
                     className="h-full bg-[#B82020] rounded-full"
-                    style={{ width: `${mockContacts.length ? (count / mockContacts.length) * 100 : 0}%` }}
+                    style={{ width: `${contacts.length ? (count / contacts.length) * 100 : 0}%` }}
                   />
                 </div>
                 <span className="text-sm font-medium text-gray-700 w-5 text-right">{count}</span>

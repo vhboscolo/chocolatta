@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react'
 import {
-  Search, Plus, Filter, MessageCircle, Mail, Upload,
+  Search, Plus, MessageCircle, Mail, Upload,
   ChevronDown, X, Phone, Building2, Tag, FileText
 } from 'lucide-react'
 import type { Contact, Interaction } from '../lib/supabase'
