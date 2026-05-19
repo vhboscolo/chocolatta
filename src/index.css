@@ -1,0 +1,40 @@
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=DM+Sans:wght@400;500;600;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --color-brand: #B82020;
+  --color-brand-dark: #7D1515;
+  --color-brand-light: #F7EEEE;
+  --color-gold: #C9A84C;
+  --color-gold-light: #F9F3DC;
+  --color-slate-bg: #1E2535;
+  --color-pistachio: #1A7F5A;
+  --color-pistachio-light: #E0F5EC;
+  --color-hazel: #8B4513;
+  --color-hazel-light: #F3E8DD;
+
+  --font-family-display: 'Playfair Display', Georgia, serif;
+  --font-family-sans: 'DM Sans', system-ui, sans-serif;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: 'DM Sans', system-ui, sans-serif;
+  font-size: 15px;
+  line-height: 1.6;
+  color: #1C1C1C;
+  background: #F2F2F2;
+  -webkit-font-smoothing: antialiased;
+}
+
+#root {
+  display: flex;
+  min-height: 100vh;
+}
+
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #C5CDD8; border-radius: 99px; }
+::-webkit-scrollbar-thumb:hover { background: #9A9A9A; }
