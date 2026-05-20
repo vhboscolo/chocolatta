@@ -166,24 +166,19 @@ export default function Sequencias() {
                   </span>
                 </div>
 
-                {/* Timeline */}
-                <div className="bg-gray-50 rounded-lg p-3 mb-3">
-                  <div className="flex items-start gap-1 overflow-x-auto">
-                    {seq.steps.map((step, idx) => (
-                      <div key={idx} className="flex items-start flex-1 min-w-0">
-                        <div className="flex flex-col items-center text-center min-w-0 flex-1">
-                          <div className="w-7 h-7 rounded-full bg-white border border-gray-200 flex items-center justify-center mb-1">
-                            {actionIcon(step.action, 12)}
-                          </div>
-                          <div className="text-[10px] font-semibold text-gray-700">Dia {step.day_offset}</div>
-                          <div className="text-[10px] text-gray-400 truncate w-full px-0.5">{step.label}</div>
-                        </div>
-                        {idx < seq.steps.length - 1 && (
-                          <div className="h-px bg-gray-200 flex-1 mt-3.5 min-w-[8px]" />
-                        )}
+                {/* Timeline — vertical no mobile, horizontal no desktop (evita esmagar com >3 passos) */}
+                <div className="bg-gray-50 rounded-lg p-3 mb-3 space-y-2 sm:space-y-0">
+                  {seq.steps.map((step, idx) => (
+                    <div key={idx} className="flex items-center gap-2.5 sm:gap-0 sm:items-start sm:flex-col sm:text-center sm:relative">
+                      <div className="w-7 h-7 rounded-full bg-white border border-gray-200 flex items-center justify-center flex-shrink-0 sm:mb-1 sm:mx-auto">
+                        {actionIcon(step.action, 12)}
                       </div>
-                    ))}
-                  </div>
+                      <div className="flex-1 min-w-0 sm:flex-none">
+                        <div className="text-[10px] font-semibold text-gray-700">Dia {step.day_offset}</div>
+                        <div className="text-[10px] text-gray-500 sm:truncate sm:w-full">{step.label}</div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
 
                 <button

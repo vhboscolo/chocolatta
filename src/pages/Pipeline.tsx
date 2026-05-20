@@ -62,11 +62,7 @@ export default function Pipeline() {
       } else {
         setOrders(prev => prev.map(o => o.id === id ? { ...o, status: novoStatus } : o))
       }
-      if (novoStatus === 'pago' && order.status !== 'pago') {
-        toast.success('Pedido pago — estoque baixado automaticamente')
-      } else {
-        toast.success(`Pedido movido para ${STATUS_LABELS[novoStatus] ?? novoStatus}`)
-      }
+      toast.success(`Pedido movido para ${STATUS_LABELS[novoStatus] ?? novoStatus}`)
     } catch {
       toast.error('Erro ao mover pedido')
     }

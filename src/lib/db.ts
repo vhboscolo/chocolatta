@@ -214,6 +214,15 @@ export async function createSequence(seq: Omit<FollowUpSequence, 'id' | 'created
   return data
 }
 
+/** Formata Date para 'YYYY-MM-DD' usando componentes locais (não UTC).
+ *  Evita bug onde, em UTC-3, `toISOString().split('T')[0]` retorna o dia anterior. */
+function toLocalDateString(d: Date): string {
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
 export async function applySequenceToContact(
   sequence: FollowUpSequence,
   contactId: string,
@@ -226,7 +235,7 @@ export async function applySequenceToContact(
       sequence_id: sequence.id,
       contact_id: contactId,
       step_index: idx,
-      scheduled_for: d.toISOString().split('T')[0],
+      scheduled_for: toLocalDateString(d),
       action: step.action,
       template_id: step.template_id,
       label: step.label,

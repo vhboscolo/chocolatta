@@ -70,6 +70,11 @@ export default function ProposalView() {
     try {
       if (IS_CONFIGURED) {
         await db.rejectOrder(token)
+        // Anexa o motivo da recusa às notas (apenas Victor verá no CRM)
+        if (rejectReason.trim()) {
+          const novaNota = `[Recusada] ${rejectReason.trim()}\n\n${order.notes ?? ''}`.trim()
+          await db.updateOrder(order.id, { notes: novaNota })
+        }
       }
       setOrder({ ...order, rejected_at: new Date().toISOString(), status: 'cancelado' })
       setShowRejectModal(false)
@@ -118,8 +123,10 @@ export default function ProposalView() {
   }
 
   const contact = order.contact
-  const subtotal = (order.total ?? 0) / (1 - (order.discount_pct ?? 0) / 100)
-  const desconto = subtotal - (order.total ?? 0)
+  const total = order.total ?? 0
+  const discountPct = Math.min(99.99, Math.max(0, order.discount_pct ?? 0))
+  const subtotal = total / (1 - discountPct / 100)
+  const desconto = subtotal - total
   const validUntil = order.valid_until ? parseISO(order.valid_until) : null
   const diasRestantes = validUntil ? differenceInDays(validUntil, new Date()) : null
   const expirada = diasRestantes !== null && diasRestantes < 0
@@ -268,12 +275,7 @@ export default function ProposalView() {
               </div>
             )}
           </div>
-          {order.notes && (
-            <div>
-              <div className="text-xs text-gray-400 mb-1">Observações</div>
-              <div className="text-sm text-gray-700 bg-gray-50 rounded-lg p-3 leading-relaxed">{order.notes}</div>
-            </div>
-          )}
+          {/* Observações internas (order.notes) ficam apenas no CRM — não vazam para o cliente */}
         </section>
 
         {/* Status final messages */}

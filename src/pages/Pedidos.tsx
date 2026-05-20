@@ -189,7 +189,9 @@ export default function Pedidos() {
         setOrders(prev => prev.map(o => o.id === id ? { ...o, status: novoStatus } : o))
       }
       if (novoStatus === 'pago' && order.status !== 'pago') {
-        toast.success('Pedido pago — estoque baixado automaticamente.')
+        toast.success('Pedido marcado como pago')
+      } else {
+        toast.success(`Status atualizado para ${statusLabels[novoStatus] ?? novoStatus}`)
       }
     } catch {
       toast.error('Erro ao atualizar status')

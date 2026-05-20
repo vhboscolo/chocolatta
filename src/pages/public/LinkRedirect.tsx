@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { useParams } from 'react-router-dom'
 import { incrementLinkClick } from '../../lib/db'
 import { IS_CONFIGURED } from '../../hooks/useData'
+import { mockTrackedLinks } from '../../lib/mockData'
 
 /**
  * /l/:token — rastreia o clique e redireciona conforme o destino.
@@ -14,26 +15,22 @@ export default function LinkRedirect() {
     if (!token) return
     let cancelled = false
     ;(async () => {
-      try {
-        if (IS_CONFIGURED) {
-          const link = await incrementLinkClick(token)
-          if (cancelled) return
-          if (link?.destination === 'catalog') {
-            window.location.replace(`/c/${link.destination_id ?? token}`)
-            return
-          }
-          if (link?.destination === 'proposal' && link.destination_id) {
-            window.location.replace(`/p/${link.destination_id}`)
-            return
-          }
-          if (link?.destination === 'custom' && link.destination_id) {
-            window.location.replace(link.destination_id)
-            return
-          }
-        }
-      } catch { /* silent */ }
-      // fallback
-      window.location.replace('/c')
+      const link = IS_CONFIGURED
+        ? await incrementLinkClick(token).catch(() => null)
+        : mockTrackedLinks.find(l => l.token === token) ?? null
+
+      if (cancelled) return
+
+      if (link?.destination === 'proposal' && link.destination_id) {
+        window.location.replace(`/p/${link.destination_id}`)
+        return
+      }
+      if (link?.destination === 'custom' && link.destination_id) {
+        window.location.replace(link.destination_id)
+        return
+      }
+      // 'catalog' ou sem destino — abre catálogo personalizado pelo token
+      window.location.replace(`/c/${token}`)
     })()
     return () => { cancelled = true }
   }, [token])

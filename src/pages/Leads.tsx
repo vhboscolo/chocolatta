@@ -4,7 +4,7 @@ import {
   ChevronDown, X, Phone, Building2, Tag, FileText
 } from 'lucide-react'
 import type { Contact, Interaction } from '../lib/supabase'
-import { useContacts, useInteractions, IS_CONFIGURED } from '../hooks/useData'
+import { useContacts, useInteractions, useTrackedLinks, IS_CONFIGURED } from '../hooks/useData'
 import * as db from '../lib/db'
 import { format, parseISO, differenceInDays } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -81,6 +81,7 @@ export default function Leads() {
   const [showImport, setShowImport] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
   const { data: interactions, setData: setInteractions } = useInteractions(selecionado?.id ?? null)
+  const { data: trackedLinks } = useTrackedLinks(selecionado?.id ?? null)
   const [novaInteracao, setNovaInteracao] = useState({ type: 'whatsapp', notes: '', next_action: '', next_action_date: '' })
 
   const filtered = contacts.filter(c => {
@@ -400,6 +401,34 @@ export default function Leads() {
                     Registrar
                   </button>
                 </div>
+              </div>
+
+              {/* Links rastreados */}
+              <div className="p-4 border-b border-gray-100">
+                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3 flex items-center gap-1">
+                  <FileText size={11} />Links Rastreados
+                </h3>
+                {trackedLinks.length === 0 ? (
+                  <p className="text-xs text-gray-400">Nenhum link compartilhado ainda. Vá em <span className="font-medium">Catálogo &gt; Compartilhar</span> para gerar um link personalizado.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {trackedLinks.map(link => (
+                      <div key={link.id} className="text-xs bg-gray-50 rounded-lg p-2.5">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="font-medium text-gray-700 truncate">{link.label ?? link.destination}</span>
+                          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full flex-shrink-0 ${link.click_count > 0 ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-500'}`}>
+                            {link.click_count}× {link.click_count === 1 ? 'clique' : 'cliques'}
+                          </span>
+                        </div>
+                        <div className="text-[10px] text-gray-400 mt-1 flex items-center gap-2 flex-wrap">
+                          <span className="capitalize">{link.destination}</span>
+                          {link.last_clicked_at && <span>· último: {format(parseISO(link.last_clicked_at), "d MMM HH:mm", { locale: ptBR })}</span>}
+                          {!link.last_clicked_at && <span>· nunca aberto</span>}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Histórico */}
