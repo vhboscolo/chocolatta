@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import type {
   Contact, Product, Order, Campaign, Template, Interaction,
   FollowUpSequence, FollowUpTask, TrackedLink,
-  ProspectingRun, WhatsAppTemplate,
+  ProspectingRun, WhatsAppTemplate, AiBriefing,
 } from '../lib/supabase'
 import * as db from '../lib/db'
 import {
@@ -167,6 +167,85 @@ export function useWhatsAppTemplates() {
   }, [])
   useEffect(() => { reload() }, [reload])
   return { data, setData, loading, reload }
+}
+
+/**
+ * Today's AI briefing — checks cache first, generates if missing.
+ * Caller must pass orders, products, tasks, links since these aren't
+ * always loaded by the consumer.
+ */
+export function useDailyBriefing(opts: {
+  contacts: Contact[]
+  orders: Order[]
+  products: Product[]
+  tasks: FollowUpTask[]
+  links: TrackedLink[]
+  autoGenerate?: boolean        // if true, generates on mount when cache miss
+}) {
+  const [briefing, setBriefing] = useState<AiBriefing | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [generating, setGenerating] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const generate = useCallback(async () => {
+    if (!IS_CONFIGURED) {
+      setError('Supabase não configurado — briefing requer banco')
+      return
+    }
+    setGenerating(true)
+    setError(null)
+    try {
+      // Lazy-import heavy LLM module
+      const [{ buildCrmSnapshot, generateDailyBriefing }] = await Promise.all([
+        import('../lib/aiAnalyst'),
+      ])
+      const snapshot = buildCrmSnapshot({
+        contacts: opts.contacts,
+        orders: opts.orders,
+        products: opts.products,
+        tasks: opts.tasks,
+        links: opts.links,
+      })
+      const result = await generateDailyBriefing(snapshot)
+      const saved = await db.saveBriefing({
+        briefing_date: new Date().toISOString().split('T')[0],
+        llm_model: result.model,
+        tokens_used: result.tokensUsed,
+        foco_do_dia: result.foco_do_dia,
+        leads_quentes: result.leads_quentes,
+        leads_esfriando: result.leads_esfriando,
+        riscos: result.riscos,
+        insights: result.insights,
+        oportunidades: result.oportunidades,
+        prospecting_suggestions: result.prospecting_suggestions,
+        summary: result.summary,
+      })
+      setBriefing(saved)
+    } catch (e) {
+      setError((e as Error).message)
+    } finally {
+      setGenerating(false)
+    }
+  }, [opts.contacts, opts.orders, opts.products, opts.tasks, opts.links])
+
+  // Load cached briefing on mount
+  useEffect(() => {
+    if (!IS_CONFIGURED) return
+    setLoading(true)
+    db.fetchTodaysBriefing()
+      .then(b => {
+        setBriefing(b)
+        // Auto-generate if missing and we have data loaded
+        if (!b && opts.autoGenerate && opts.contacts.length > 0) {
+          generate()
+        }
+      })
+      .catch(e => setError((e as Error).message))
+      .finally(() => setLoading(false))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [opts.autoGenerate, opts.contacts.length > 0])
+
+  return { briefing, loading, generating, error, generate, setBriefing }
 }
 
 export { IS_CONFIGURED }

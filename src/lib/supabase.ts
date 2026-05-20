@@ -93,6 +93,31 @@ export interface WhatsAppMessage {
   sent_at: string
 }
 
+// ── AI daily briefings ──────────────────────────────────────────────────
+export interface AiBriefing {
+  id: string
+  briefing_date: string                                   // YYYY-MM-DD
+  llm_model?: string
+  tokens_used: number
+  foco_do_dia: { title: string; detail: string; urgency: 'alta' | 'media' | 'baixa'; contact_id?: string }[]
+  leads_quentes: { title: string; detail: string; urgency: string; contact_id?: string }[]
+  leads_esfriando: { title: string; detail: string; urgency: string; contact_id?: string }[]
+  riscos: { title: string; detail: string; urgency: string }[]
+  insights: string[]
+  oportunidades: string[]
+  prospecting_suggestions: {
+    search_query: string
+    region: string
+    rationale: string
+    confidence: number
+    expected_value: 'alto' | 'medio' | 'baixo'
+    emoji: string
+  }[]
+  summary?: string
+  raw_llm_output?: string
+  generated_at: string
+}
+
 // ── Scrape jobs (Apify run tracking) ──────────────────────────────────────
 export interface ScrapeJob {
   id: string

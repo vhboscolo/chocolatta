@@ -2,7 +2,7 @@ import { supabase } from './supabase'
 import type {
   Contact, Product, Order, OrderItem, Campaign, Template, Interaction,
   TrackedLink, FollowUpSequence, FollowUpTask, SequenceStep,
-  ProspectingRun, WhatsAppTemplate, WhatsAppMessage,
+  ProspectingRun, WhatsAppTemplate, WhatsAppMessage, AiBriefing,
 } from './supabase'
 
 // ── Contacts ──────────────────────────────────────────────
@@ -424,6 +424,42 @@ export async function fetchContactMessages(contactId: string): Promise<WhatsAppM
     .select('*')
     .eq('contact_id', contactId)
     .order('sent_at', { ascending: false })
+  if (error) throw error
+  return data ?? []
+}
+
+// ── Feature #11: AI daily briefings ──────────────────────────────────────
+
+export async function fetchTodaysBriefing(): Promise<AiBriefing | null> {
+  const today = new Date().toISOString().split('T')[0]
+  const { data, error } = await supabase
+    .from('ai_briefings')
+    .select('*')
+    .eq('briefing_date', today)
+    .maybeSingle()
+  if (error) throw error
+  return data
+}
+
+export async function saveBriefing(
+  briefing: Omit<AiBriefing, 'id' | 'generated_at'>,
+): Promise<AiBriefing> {
+  // Upsert by briefing_date (unique constraint)
+  const { data, error } = await supabase
+    .from('ai_briefings')
+    .upsert(briefing, { onConflict: 'briefing_date' })
+    .select()
+    .single()
+  if (error) throw error
+  return data
+}
+
+export async function fetchRecentBriefings(limit = 7): Promise<AiBriefing[]> {
+  const { data, error } = await supabase
+    .from('ai_briefings')
+    .select('*')
+    .order('briefing_date', { ascending: false })
+    .limit(limit)
   if (error) throw error
   return data ?? []
 }

@@ -9,12 +9,14 @@ import {
   normalizeLat, normalizeLng,
   type ApifyPlace, type ApifyRunStatus,
 } from '../lib/apify'
-import { IS_CONFIGURED } from '../hooks/useData'
+import { IS_CONFIGURED, useDailyBriefing, useProducts, useOrders, useFollowUpTasks, useAllTrackedLinks } from '../hooks/useData'
 import * as db from '../lib/db'
 import { mockScrapeResults } from '../lib/mockData'
 import { useContacts } from '../hooks/useData'
 import { qualifyBatch, type QualificationResult, QUALIFICATION_THRESHOLD } from '../lib/prospectingAgent'
 import { IS_LLM_CONFIGURED, LLM_MODEL } from '../lib/llm'
+import { ProspectingSuggestions } from '../components/BriefingPanel'
+import type { AiBriefing } from '../lib/supabase'
 
 // ─── Dedup status ─────────────────────────────────────────────────────────
 
@@ -53,6 +55,17 @@ function computeDedup(
 
 export default function Prospeccao() {
   const { data: existingContacts } = useContacts()
+  const { data: products } = useProducts()
+  const { data: orders } = useOrders()
+  const { data: tasks } = useFollowUpTasks()
+  const { data: links } = useAllTrackedLinks()
+
+  // AI daily briefing — used for "Negócios sugeridos pela IA"
+  const briefingState = useDailyBriefing({
+    contacts: existingContacts,
+    orders, products, tasks, links,
+    autoGenerate: IS_LLM_CONFIGURED && IS_CONFIGURED,
+  })
 
   // Form state
   const [businessType, setBusinessType] = useState(BUSINESS_TYPES[0])
@@ -160,8 +173,12 @@ export default function Prospeccao() {
     return stopPolling
   }, [runId, phase, maxResults, stopPolling, processResults])
 
-  const handleSearch = async () => {
-    const query = customQuery.trim() || businessType.query
+  const handleSearch = async (
+    overrideQuery?: string,
+    overrideLocation?: string,
+  ) => {
+    const query = overrideQuery ?? (customQuery.trim() || businessType.query)
+    const loc = overrideLocation ?? city
     setPhase('running')
     setRows([])
     setErrorMsg('')
@@ -175,13 +192,26 @@ export default function Prospeccao() {
     }
 
     try {
-      const id = await startGoogleMapsScrape({ searchQuery: query, location: city, maxResults })
+      const id = await startGoogleMapsScrape({ searchQuery: query, location: loc, maxResults })
       setRunId(id)
       setRunStatus('RUNNING')
     } catch (e) {
       setPhase('error')
       setErrorMsg((e as Error).message)
     }
+  }
+
+  /** Triggered when user clicks an AI prospecting suggestion card */
+  const handleAiSuggestionClick = (s: AiBriefing['prospecting_suggestions'][number]) => {
+    setCustomQuery(s.search_query)
+    // Try to extract a known city from the suggested region
+    const cityMatch = (s.region || '').split(',').map(p => p.trim())
+    const matchedCity = cityMatch.find(part => SP_CITIES.includes(part as (typeof SP_CITIES)[number]))
+    if (matchedCity) setCity(matchedCity)
+    // Compose final query: "padaria premium em Jardins"
+    const fullQuery = `${s.search_query} em ${s.region}`
+    toast.success(`IA escolheu: ${s.search_query} — ${s.region}`)
+    handleSearch(fullQuery, matchedCity ?? city)
   }
 
   const toggleRow = (idx: number) => {
@@ -268,6 +298,41 @@ export default function Prospeccao() {
         </div>
       )}
 
+      {/* AI-suggested business types */}
+      {IS_LLM_CONFIGURED && briefingState.briefing && (
+        <ProspectingSuggestions
+          briefing={briefingState.briefing}
+          onRefresh={briefingState.generate}
+          onSelect={(s) => handleAiSuggestionClick(s)}
+        />
+      )}
+      {IS_LLM_CONFIGURED && !briefingState.briefing && !briefingState.loading && (
+        <div className="bg-gradient-to-br from-purple-50 to-pink-50 border border-purple-200 rounded-2xl p-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-purple-600 to-pink-600 text-white flex items-center justify-center">
+              <Brain size={16} />
+            </div>
+            <div>
+              <div className="font-semibold text-sm text-gray-900">Pedir sugestões à IA</div>
+              <div className="text-[10px] text-gray-600">
+                A IA analisa seu CRM e sugere 5 buscas estratégicas
+              </div>
+            </div>
+          </div>
+          <button
+            onClick={briefingState.generate}
+            disabled={briefingState.generating}
+            className="flex items-center gap-1.5 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white text-xs font-semibold px-3 py-2 rounded-lg disabled:opacity-50"
+          >
+            {briefingState.generating ? (
+              <><Loader2 size={11} className="animate-spin" /> Analisando…</>
+            ) : (
+              <><Sparkles size={11} /> Analisar</>
+            )}
+          </button>
+        </div>
+      )}
+
       {/* Search form */}
       <div className="bg-white rounded-2xl border border-gray-200 p-5 space-y-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -346,7 +411,7 @@ export default function Prospeccao() {
         </div>
 
         <button
-          onClick={handleSearch}
+          onClick={() => handleSearch()}
           disabled={phase === 'running'}
           className="w-full flex items-center justify-center gap-2 bg-[#B82020] hover:bg-[#9a1b1b] text-white font-semibold py-3 rounded-xl transition-colors disabled:opacity-60"
         >

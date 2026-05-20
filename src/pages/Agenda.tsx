@@ -7,13 +7,16 @@ import {
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import {
-  useContacts, useProducts, useOrders, useFollowUpTasks, IS_CONFIGURED,
+  useContacts, useProducts, useOrders, useFollowUpTasks, useAllTrackedLinks,
+  useDailyBriefing, IS_CONFIGURED,
 } from '../hooks/useData'
 import * as db from '../lib/db'
 import type { FollowUpTask, Contact, SequenceAction } from '../lib/supabase'
 import { Link } from 'react-router-dom'
 import NotificationBanner from '../components/NotificationBanner'
 import { useNotificationDispatcher } from '../hooks/useNotificationDispatcher'
+import BriefingPanel from '../components/BriefingPanel'
+import { IS_LLM_CONFIGURED } from '../lib/llm'
 
 function buildWhatsApp(phone: string, name: string, customMsg?: string) {
   const clean = phone.replace(/\D/g, '')
@@ -58,6 +61,13 @@ export default function Agenda() {
   const { data: products } = useProducts()
   const { data: orders } = useOrders()
   const { data: tasks, setData: setTasks, reload: reloadTasks } = useFollowUpTasks()
+  const { data: links } = useAllTrackedLinks()
+
+  // AI daily briefing — auto-generates if no cached briefing exists today
+  const briefingState = useDailyBriefing({
+    contacts, orders, products, tasks, links,
+    autoGenerate: IS_LLM_CONFIGURED && IS_CONFIGURED,
+  })
 
   // Notification dispatcher — checks every 5 min while app open
   useNotificationDispatcher({ products, orders, contacts, tasks })
@@ -295,7 +305,7 @@ export default function Agenda() {
   const hoje = format(new Date(), "EEEE, d 'de' MMMM", { locale: ptBR })
 
   return (
-    <div className="space-y-5 max-w-2xl">
+    <div className="space-y-5 max-w-3xl">
       {/* Notification banner */}
       <NotificationBanner />
 
@@ -304,6 +314,18 @@ export default function Agenda() {
         <h1 className="text-xl font-bold text-gray-900">Agenda do Dia</h1>
         <p className="text-xs text-gray-500 mt-0.5 capitalize">{hoje}</p>
       </div>
+
+      {/* AI Daily Briefing — at the top, full version */}
+      {IS_LLM_CONFIGURED && (
+        <BriefingPanel
+          briefing={briefingState.briefing}
+          loading={briefingState.loading}
+          generating={briefingState.generating}
+          error={briefingState.error}
+          onGenerate={briefingState.generate}
+          compact={false}
+        />
+      )}
 
       {/* Resumo */}
       <div className="grid grid-cols-3 gap-2">
