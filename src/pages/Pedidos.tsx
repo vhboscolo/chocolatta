@@ -66,25 +66,25 @@ export default function Pedidos() {
   }
 
   return (
-    <div className="space-y-5 max-w-4xl">
+    <div className="space-y-4 max-w-4xl">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Pedidos & Propostas</h1>
-          <p className="text-sm text-gray-500 mt-0.5">
+          <h1 className="text-xl font-bold text-gray-900">Pedidos</h1>
+          <p className="text-xs text-gray-500 mt-0.5">
             {orders.length} pedido{orders.length !== 1 ? 's' : ''} · R$ {totalReceita.toLocaleString('pt-BR', { maximumFractionDigits: 0 })} recebidos
           </p>
         </div>
         <button
           onClick={() => setShowNovo(true)}
-          className="flex items-center gap-1.5 text-sm font-medium text-white bg-[#B82020] px-4 py-2 rounded-lg hover:bg-[#9E1C1C] transition-colors"
+          className="flex items-center gap-1.5 text-sm font-medium text-white bg-[#B82020] px-3 py-2 rounded-lg active:bg-[#9E1C1C] transition-colors"
         >
           <Plus size={14} />
-          Nova Proposta
+          <span className="hidden sm:inline">Nova </span>Proposta
         </button>
       </div>
 
       {/* Filtro */}
-      <div className="flex gap-2 flex-wrap">
+      <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-none">
         <button
           onClick={() => setFiltroStatus('')}
           className={`text-xs font-medium px-3 py-1.5 rounded-full transition-colors ${!filtroStatus ? 'bg-[#B82020] text-white' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'}`}

@@ -120,49 +120,52 @@ export default function Leads() {
   const fichaInteracoes = IS_CONFIGURED ? interactions : interactions.filter(i => i.contact_id === selecionado?.id)
 
   return (
-    <div className="flex h-[calc(100vh-7rem)] gap-5 max-w-7xl">
-      {/* Lista */}
-      <div className="flex-1 flex flex-col bg-white rounded-xl border border-gray-200 overflow-hidden">
+    <div className="flex flex-col md:flex-row md:h-[calc(100dvh-3.5rem)] gap-3 max-w-7xl">
+
+      {/* ── Lista ── */}
+      <div className="flex-1 flex flex-col bg-white rounded-xl border border-gray-200 overflow-hidden min-h-0">
         {/* Header */}
-        <div className="p-4 border-b border-gray-100 space-y-3">
+        <div className="p-3 border-b border-gray-100 space-y-2.5">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-lg font-bold text-gray-900">Leads</h1>
+              <h1 className="text-base font-bold text-gray-900">Leads</h1>
               <p className="text-xs text-gray-400">{filtered.length} contato{filtered.length !== 1 ? 's' : ''}</p>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5">
               <button
                 onClick={() => setShowImport(true)}
-                className="flex items-center gap-1.5 text-sm font-medium text-gray-600 border border-gray-200 px-3 py-1.5 rounded-lg hover:bg-gray-50 transition-colors"
+                className="flex items-center gap-1 text-sm font-medium text-gray-600 border border-gray-200 px-2.5 py-1.5 rounded-lg hover:bg-gray-50 transition-colors"
               >
-                <Upload size={14} />
-                Importar CSV
+                <Upload size={13} />
+                <span className="hidden sm:inline">CSV</span>
               </button>
               <button
                 onClick={() => setShowForm(true)}
-                className="flex items-center gap-1.5 text-sm font-medium text-white bg-[#B82020] px-3 py-1.5 rounded-lg hover:bg-[#9E1C1C] transition-colors"
+                className="flex items-center gap-1 text-sm font-medium text-white bg-[#B82020] px-2.5 py-1.5 rounded-lg hover:bg-[#9E1C1C] transition-colors"
               >
-                <Plus size={14} />
-                Novo Lead
+                <Plus size={13} />
+                <span className="hidden sm:inline">Novo</span>
               </button>
             </div>
           </div>
 
-          {/* Busca + filtros */}
+          {/* Busca */}
+          <div className="relative">
+            <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input
+              value={busca}
+              onChange={e => setBusca(e.target.value)}
+              placeholder="Buscar nome, empresa ou e-mail..."
+              className="w-full pl-8 pr-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#B82020]/30 focus:border-[#B82020]"
+            />
+          </div>
+
+          {/* Filtros */}
           <div className="flex gap-2">
-            <div className="relative flex-1">
-              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-              <input
-                value={busca}
-                onChange={e => setBusca(e.target.value)}
-                placeholder="Buscar por nome, empresa ou e-mail..."
-                className="w-full pl-8 pr-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#B82020]/30 focus:border-[#B82020]"
-              />
-            </div>
             <select
               value={filtroSegmento}
               onChange={e => setFiltroSegmento(e.target.value)}
-              className="text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#B82020]/30 text-gray-600"
+              className="flex-1 text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-[#B82020]/30 text-gray-600"
             >
               <option value="">Segmento</option>
               {SEGMENTOS.map(s => <option key={s} value={s}>{s}</option>)}
@@ -170,7 +173,7 @@ export default function Leads() {
             <select
               value={filtroStatus}
               onChange={e => setFiltroStatus(e.target.value)}
-              className="text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#B82020]/30 text-gray-600"
+              className="flex-1 text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-[#B82020]/30 text-gray-600"
             >
               <option value="">Status</option>
               {STATUS_LIST.map(s => <option key={s} value={s}>{statusLabels[s]}</option>)}
@@ -178,15 +181,58 @@ export default function Leads() {
           </div>
         </div>
 
-        {/* Tabela */}
+        {/* Lista de contatos — cards no mobile, tabela no desktop */}
         <div className="flex-1 overflow-auto">
-          <table className="w-full text-sm">
+          {/* Mobile: cards */}
+          <div className="md:hidden divide-y divide-gray-50">
+            {filtered.map(c => (
+              <div
+                key={c.id}
+                onClick={() => setSelecionado(c)}
+                className={`flex items-center gap-3 px-3 py-3 cursor-pointer active:bg-gray-50 ${selecionado?.id === c.id ? 'bg-[#F7EEEE]' : ''}`}
+              >
+                <div className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center text-sm font-bold text-gray-500 flex-shrink-0">
+                  {c.name.charAt(0).toUpperCase()}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-medium text-gray-900 text-sm truncate">{c.name}</span>
+                    <NeedFollowUp updatedAt={c.updated_at} />
+                  </div>
+                  {c.company && <div className="text-xs text-gray-400 truncate">{c.company}</div>}
+                </div>
+                <div className="flex-shrink-0 text-right">
+                  <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full border ${statusColors[c.status]}`}>
+                    {statusLabels[c.status]}
+                  </span>
+                  {c.phone && (
+                    <a
+                      href={buildWhatsApp(c.phone, c.name, c.company)}
+                      target="_blank"
+                      rel="noreferrer"
+                      onClick={e => e.stopPropagation()}
+                      className="flex items-center justify-end gap-0.5 text-[10px] text-green-700 mt-1"
+                    >
+                      <MessageCircle size={10} />
+                      WA
+                    </a>
+                  )}
+                </div>
+              </div>
+            ))}
+            {filtered.length === 0 && (
+              <div className="px-4 py-12 text-center text-sm text-gray-400">Nenhum lead encontrado</div>
+            )}
+          </div>
+
+          {/* Desktop: tabela */}
+          <table className="hidden md:table w-full text-sm">
             <thead className="sticky top-0 bg-gray-50 border-b border-gray-100">
               <tr>
                 <th className="text-left font-medium text-gray-500 px-4 py-3">Nome / Empresa</th>
-                <th className="text-left font-medium text-gray-500 px-4 py-3 hidden md:table-cell">Segmento</th>
+                <th className="text-left font-medium text-gray-500 px-4 py-3">Segmento</th>
                 <th className="text-left font-medium text-gray-500 px-4 py-3">Status</th>
-                <th className="text-left font-medium text-gray-500 px-4 py-3 hidden lg:table-cell">Contato</th>
+                <th className="text-left font-medium text-gray-500 px-4 py-3">Contato</th>
                 <th className="px-4 py-3"></th>
               </tr>
             </thead>
@@ -201,224 +247,174 @@ export default function Leads() {
                     <div className="font-medium text-gray-900">{c.name}</div>
                     {c.company && <div className="text-xs text-gray-400">{c.company}</div>}
                   </td>
-                  <td className="px-4 py-3 hidden md:table-cell">
-                    {c.segment && (
-                      <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full capitalize">{c.segment}</span>
-                    )}
+                  <td className="px-4 py-3">
+                    {c.segment && <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full capitalize">{c.segment}</span>}
                   </td>
                   <td className="px-4 py-3">
-                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full border ${statusColors[c.status]}`}>
-                      {statusLabels[c.status]}
-                    </span>
+                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full border ${statusColors[c.status]}`}>{statusLabels[c.status]}</span>
                     <NeedFollowUp updatedAt={c.updated_at} />
                   </td>
-                  <td className="px-4 py-3 hidden lg:table-cell">
+                  <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
                       {c.phone && (
-                        <a
-                          href={buildWhatsApp(c.phone, c.name, c.company)}
-                          target="_blank"
-                          rel="noreferrer"
-                          onClick={e => e.stopPropagation()}
-                          className="flex items-center gap-1 text-xs text-green-700 hover:text-green-800 bg-green-50 px-2 py-1 rounded-md transition-colors"
-                        >
-                          <MessageCircle size={11} />
-                          WhatsApp
+                        <a href={buildWhatsApp(c.phone, c.name, c.company)} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()}
+                          className="flex items-center gap-1 text-xs text-green-700 bg-green-50 px-2 py-1 rounded-md">
+                          <MessageCircle size={11} />WhatsApp
                         </a>
                       )}
                       {c.email && (
-                        <a
-                          href={`mailto:${c.email}`}
-                          onClick={e => e.stopPropagation()}
-                          className="flex items-center gap-1 text-xs text-blue-700 hover:text-blue-800 bg-blue-50 px-2 py-1 rounded-md transition-colors"
-                        >
-                          <Mail size={11} />
-                          E-mail
+                        <a href={`mailto:${c.email}`} onClick={e => e.stopPropagation()}
+                          className="flex items-center gap-1 text-xs text-blue-700 bg-blue-50 px-2 py-1 rounded-md">
+                          <Mail size={11} />E-mail
                         </a>
                       )}
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-gray-400">
-                    <ChevronDown size={14} className="-rotate-90" />
-                  </td>
+                  <td className="px-4 py-3 text-gray-400"><ChevronDown size={14} className="-rotate-90" /></td>
                 </tr>
               ))}
               {filtered.length === 0 && (
-                <tr>
-                  <td colSpan={5} className="px-4 py-12 text-center text-sm text-gray-400">
-                    Nenhum lead encontrado
-                  </td>
-                </tr>
+                <tr><td colSpan={5} className="px-4 py-12 text-center text-sm text-gray-400">Nenhum lead encontrado</td></tr>
               )}
             </tbody>
           </table>
         </div>
       </div>
 
-      {/* Ficha lateral */}
+      {/* ── Ficha: bottom sheet mobile / painel lateral desktop ── */}
       {selecionado && (
-        <div className="w-80 flex-shrink-0 bg-white rounded-xl border border-gray-200 flex flex-col overflow-hidden">
-          <div className="p-4 border-b border-gray-100 flex items-start justify-between">
-            <div>
-              <h2 className="font-bold text-gray-900">{selecionado.name}</h2>
-              {selecionado.company && <div className="text-sm text-gray-500 flex items-center gap-1"><Building2 size={12} />{selecionado.company}</div>}
-            </div>
-            <button onClick={() => setSelecionado(null)} className="text-gray-400 hover:text-gray-600">
-              <X size={16} />
-            </button>
-          </div>
+        <>
+          {/* Overlay mobile */}
+          <div className="fixed inset-0 bg-black/30 z-30 md:hidden" onClick={() => setSelecionado(null)} />
 
-          <div className="flex-1 overflow-auto">
-            {/* Dados */}
-            <div className="p-4 space-y-3 border-b border-gray-100">
-              <div className="flex flex-wrap gap-2">
-                <span className={`text-xs font-medium px-2 py-0.5 rounded-full border ${statusColors[selecionado.status]}`}>
-                  {statusLabels[selecionado.status]}
-                </span>
-                {selecionado.segment && (
-                  <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full capitalize">{selecionado.segment}</span>
+          <div className={`
+            fixed bottom-16 left-0 right-0 z-40 max-h-[75vh] flex flex-col bg-white rounded-t-2xl shadow-2xl
+            md:static md:max-h-none md:h-auto md:w-80 md:flex-shrink-0 md:rounded-xl md:shadow-none md:border md:border-gray-200
+            overflow-hidden
+          `}>
+            {/* Handle mobile */}
+            <div className="md:hidden flex justify-center pt-2 pb-1 flex-shrink-0">
+              <div className="w-8 h-1 bg-gray-300 rounded-full" />
+            </div>
+
+            <div className="flex items-start justify-between px-4 py-3 border-b border-gray-100 flex-shrink-0">
+              <div>
+                <h2 className="font-bold text-gray-900 text-sm">{selecionado.name}</h2>
+                {selecionado.company && <div className="text-xs text-gray-500 flex items-center gap-1 mt-0.5"><Building2 size={11} />{selecionado.company}</div>}
+              </div>
+              <button onClick={() => setSelecionado(null)} className="text-gray-400 hover:text-gray-600 p-1">
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-auto">
+              {/* Dados */}
+              <div className="p-4 space-y-3 border-b border-gray-100">
+                <div className="flex flex-wrap gap-2">
+                  <span className={`text-xs font-medium px-2 py-0.5 rounded-full border ${statusColors[selecionado.status]}`}>{statusLabels[selecionado.status]}</span>
+                  {selecionado.segment && <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full capitalize">{selecionado.segment}</span>}
+                </div>
+                {selecionado.phone && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <Phone size={13} className="text-gray-400" />
+                    <span className="text-gray-700">{selecionado.phone}</span>
+                  </div>
+                )}
+                {selecionado.email && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <Mail size={13} className="text-gray-400" />
+                    <span className="text-gray-700 truncate">{selecionado.email}</span>
+                  </div>
+                )}
+                {selecionado.tags && selecionado.tags.length > 0 && (
+                  <div className="flex items-start gap-2">
+                    <Tag size={13} className="text-gray-400 mt-0.5 flex-shrink-0" />
+                    <div className="flex flex-wrap gap-1">
+                      {selecionado.tags.map(t => <span key={t} className="text-xs bg-[#F7EEEE] text-[#B82020] px-1.5 py-0.5 rounded">{t}</span>)}
+                    </div>
+                  </div>
+                )}
+                {selecionado.notes && <div className="text-xs text-gray-600 bg-gray-50 rounded-lg p-2">{selecionado.notes}</div>}
+                {selecionado.phone && (
+                  <a href={buildWhatsApp(selecionado.phone, selecionado.name, selecionado.company)} target="_blank" rel="noreferrer"
+                    className="flex items-center justify-center gap-2 w-full text-sm font-medium text-white bg-[#25D366] py-2.5 rounded-xl transition-colors active:bg-[#1da851]">
+                    <MessageCircle size={15} />
+                    Abrir WhatsApp
+                  </a>
                 )}
               </div>
-              {selecionado.phone && (
-                <div className="flex items-center gap-2 text-sm">
-                  <Phone size={13} className="text-gray-400" />
-                  <span className="text-gray-700">{selecionado.phone}</span>
-                </div>
-              )}
-              {selecionado.email && (
-                <div className="flex items-center gap-2 text-sm">
-                  <Mail size={13} className="text-gray-400" />
-                  <span className="text-gray-700 truncate">{selecionado.email}</span>
-                </div>
-              )}
-              {selecionado.tags && selecionado.tags.length > 0 && (
-                <div className="flex items-start gap-2">
-                  <Tag size={13} className="text-gray-400 mt-0.5 flex-shrink-0" />
-                  <div className="flex flex-wrap gap-1">
-                    {selecionado.tags.map(t => (
-                      <span key={t} className="text-xs bg-[#F7EEEE] text-[#B82020] px-1.5 py-0.5 rounded">{t}</span>
-                    ))}
-                  </div>
-                </div>
-              )}
-              {selecionado.notes && (
-                <div className="text-xs text-gray-600 bg-gray-50 rounded-lg p-2">{selecionado.notes}</div>
-              )}
-              {selecionado.phone && (
-                <a
-                  href={buildWhatsApp(selecionado.phone, selecionado.name, selecionado.company)}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="flex items-center justify-center gap-2 w-full text-sm font-medium text-white bg-[#25D366] hover:bg-[#1da851] py-2 rounded-lg transition-colors"
-                >
-                  <MessageCircle size={14} />
-                  Abrir WhatsApp
-                </a>
-              )}
-            </div>
 
-            {/* Nova interação */}
-            <div className="p-4 border-b border-gray-100">
-              <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Registrar Interação</h3>
-              <div className="space-y-2">
-                <select
-                  value={novaInteracao.type}
-                  onChange={e => setNovaInteracao(p => ({ ...p, type: e.target.value }))}
-                  className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#B82020]/30"
-                >
-                  <option value="whatsapp">WhatsApp</option>
-                  <option value="ligacao">Ligação</option>
-                  <option value="email">E-mail</option>
-                  <option value="visita">Visita</option>
-                  <option value="reuniao">Reunião</option>
-                </select>
-                <textarea
-                  value={novaInteracao.notes}
-                  onChange={e => setNovaInteracao(p => ({ ...p, notes: e.target.value }))}
-                  placeholder="O que aconteceu?"
-                  rows={2}
-                  className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-[#B82020]/30"
-                />
-                <input
-                  value={novaInteracao.next_action}
-                  onChange={e => setNovaInteracao(p => ({ ...p, next_action: e.target.value }))}
-                  placeholder="Próxima ação"
-                  className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#B82020]/30"
-                />
-                <button
-                  onClick={handleSaveInteracao}
-                  className="w-full text-sm font-medium text-white bg-[#B82020] hover:bg-[#9E1C1C] py-2 rounded-lg transition-colors"
-                >
-                  Registrar
-                </button>
+              {/* Nova interação */}
+              <div className="p-4 border-b border-gray-100">
+                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Registrar Interação</h3>
+                <div className="space-y-2">
+                  <select value={novaInteracao.type} onChange={e => setNovaInteracao(p => ({ ...p, type: e.target.value }))}
+                    className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#B82020]/30">
+                    <option value="whatsapp">WhatsApp</option>
+                    <option value="ligacao">Ligação</option>
+                    <option value="email">E-mail</option>
+                    <option value="visita">Visita</option>
+                    <option value="reuniao">Reunião</option>
+                  </select>
+                  <textarea value={novaInteracao.notes} onChange={e => setNovaInteracao(p => ({ ...p, notes: e.target.value }))}
+                    placeholder="O que aconteceu?" rows={2}
+                    className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-[#B82020]/30" />
+                  <input value={novaInteracao.next_action} onChange={e => setNovaInteracao(p => ({ ...p, next_action: e.target.value }))}
+                    placeholder="Próxima ação"
+                    className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#B82020]/30" />
+                  <button onClick={handleSaveInteracao}
+                    className="w-full text-sm font-medium text-white bg-[#B82020] py-2.5 rounded-xl transition-colors active:bg-[#9E1C1C]">
+                    Registrar
+                  </button>
+                </div>
+              </div>
+
+              {/* Histórico */}
+              <div className="p-4">
+                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3 flex items-center gap-1">
+                  <FileText size={11} />Histórico
+                </h3>
+                {fichaInteracoes.length === 0
+                  ? <p className="text-xs text-gray-400">Sem interações registradas.</p>
+                  : (
+                    <div className="space-y-3">
+                      {fichaInteracoes.map(i => (
+                        <div key={i.id} className="text-xs bg-gray-50 rounded-lg p-2.5">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="font-medium text-gray-700 capitalize">{i.type}</span>
+                            <span className="text-gray-400">{format(parseISO(i.created_at), "d MMM", { locale: ptBR })}</span>
+                          </div>
+                          <p className="text-gray-600">{i.notes}</p>
+                          {i.next_action && <p className="text-[#B82020] mt-1">→ {i.next_action}</p>}
+                        </div>
+                      ))}
+                    </div>
+                  )}
               </div>
             </div>
-
-            {/* Histórico */}
-            <div className="p-4">
-              <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3 flex items-center gap-1">
-                <FileText size={11} />
-                Histórico
-              </h3>
-              {fichaInteracoes.length === 0 ? (
-                <p className="text-xs text-gray-400">Sem interações registradas.</p>
-              ) : (
-                <div className="space-y-3">
-                  {fichaInteracoes.map(i => (
-                    <div key={i.id} className="text-xs bg-gray-50 rounded-lg p-2.5">
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="font-medium text-gray-700 capitalize">{i.type}</span>
-                        <span className="text-gray-400">
-                          {format(parseISO(i.created_at), "d MMM", { locale: ptBR })}
-                        </span>
-                      </div>
-                      <p className="text-gray-600">{i.notes}</p>
-                      {i.next_action && (
-                        <p className="text-[#B82020] mt-1">→ {i.next_action}</p>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
           </div>
-        </div>
+        </>
       )}
 
       {/* Modal: Novo Lead */}
       {showForm && <LeadFormModal onClose={() => setShowForm(false)} onSave={async (c) => {
-        if (IS_CONFIGURED) {
-          await reloadContacts()
-        } else {
-          setContacts(prev => [c, ...prev])
-        }
+        if (IS_CONFIGURED) { await reloadContacts() } else { setContacts(prev => [c, ...prev]) }
         setShowForm(false)
         toast.success('Lead adicionado!')
       }} />}
 
       {/* Modal: Importar CSV */}
       {showImport && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-sm p-6 shadow-xl">
-            <h2 className="font-bold text-gray-900 mb-2">Importar CSV</h2>
+        <div className="fixed inset-0 bg-black/40 flex items-end sm:items-center justify-center z-50 p-0 sm:p-4">
+          <div className="bg-white rounded-t-2xl sm:rounded-2xl w-full max-w-sm p-5 shadow-xl">
+            <h2 className="font-bold text-gray-900 mb-1">Importar CSV</h2>
             <p className="text-sm text-gray-500 mb-4">
-              Selecione um arquivo CSV com as colunas: <code className="bg-gray-100 px-1 rounded">nome</code>, <code className="bg-gray-100 px-1 rounded">empresa</code>, <code className="bg-gray-100 px-1 rounded">telefone</code>, <code className="bg-gray-100 px-1 rounded">email</code>, <code className="bg-gray-100 px-1 rounded">segmento</code>
+              Colunas: <code className="bg-gray-100 px-1 rounded text-xs">nome</code>, <code className="bg-gray-100 px-1 rounded text-xs">empresa</code>, <code className="bg-gray-100 px-1 rounded text-xs">telefone</code>, <code className="bg-gray-100 px-1 rounded text-xs">email</code>, <code className="bg-gray-100 px-1 rounded text-xs">segmento</code>
             </p>
-            <input
-              type="file"
-              accept=".csv"
-              ref={fileRef}
-              onChange={e => { if (e.target.files?.[0]) handleImportCSV(e.target.files[0]) }}
-              className="hidden"
-            />
+            <input type="file" accept=".csv" ref={fileRef} onChange={e => { if (e.target.files?.[0]) handleImportCSV(e.target.files[0]) }} className="hidden" />
             <div className="flex gap-2">
-              <button onClick={() => setShowImport(false)} className="flex-1 text-sm text-gray-600 border border-gray-200 py-2 rounded-lg hover:bg-gray-50">Cancelar</button>
-              <button
-                onClick={() => fileRef.current?.click()}
-                className="flex-1 text-sm font-medium text-white bg-[#B82020] py-2 rounded-lg hover:bg-[#9E1C1C]"
-              >
-                Selecionar arquivo
-              </button>
+              <button onClick={() => setShowImport(false)} className="flex-1 text-sm text-gray-600 border border-gray-200 py-2.5 rounded-xl">Cancelar</button>
+              <button onClick={() => fileRef.current?.click()} className="flex-1 text-sm font-medium text-white bg-[#B82020] py-2.5 rounded-xl">Selecionar</button>
             </div>
           </div>
         </div>

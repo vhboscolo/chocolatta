@@ -34,7 +34,14 @@ body {
   min-height: 100vh;
 }
 
-::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar { width: 4px; height: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: #C5CDD8; border-radius: 99px; }
 ::-webkit-scrollbar-thumb:hover { background: #9A9A9A; }
+
+.scrollbar-none::-webkit-scrollbar { display: none; }
+.scrollbar-none { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* Previne bounce/overscroll no iOS */
+html { height: -webkit-fill-available; }
+body { min-height: -webkit-fill-available; }

@@ -32,18 +32,18 @@ export default function Campanhas() {
   const [showLinks, setShowLinks] = useState<{ links: string[]; nome: string } | null>(null)
 
   return (
-    <div className="space-y-5 max-w-4xl">
+    <div className="space-y-4 max-w-4xl">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Campanhas</h1>
-          <p className="text-sm text-gray-500 mt-0.5">{campaigns.length} campanha{campaigns.length !== 1 ? 's' : ''}</p>
+          <h1 className="text-xl font-bold text-gray-900">Campanhas</h1>
+          <p className="text-xs text-gray-500 mt-0.5">{campaigns.length} campanha{campaigns.length !== 1 ? 's' : ''}</p>
         </div>
         <button
           onClick={() => setShowNova(true)}
-          className="flex items-center gap-1.5 text-sm font-medium text-white bg-[#B82020] px-4 py-2 rounded-lg hover:bg-[#9E1C1C] transition-colors"
+          className="flex items-center gap-1.5 text-sm font-medium text-white bg-[#B82020] px-3 py-2 rounded-lg active:bg-[#9E1C1C] transition-colors"
         >
           <Plus size={14} />
-          Nova Campanha
+          <span className="hidden sm:inline">Nova </span>Campanha
         </button>
       </div>
 

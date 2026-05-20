@@ -103,35 +103,32 @@ export default function Estoque() {
   }
 
   return (
-    <div className="space-y-5 max-w-5xl">
-      <div className="flex items-start justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Estoque</h1>
-          <p className="text-sm text-gray-500 mt-0.5">{totalUnidades.toLocaleString('pt-BR')} unidades · R$ {totalValor.toLocaleString('pt-BR', { maximumFractionDigits: 0 })} em estoque</p>
-        </div>
-        {/* Seletor de canal de preço */}
-        <div className="bg-white border border-gray-200 rounded-xl p-3">
-          <div className="text-xs text-gray-500 mb-2 font-medium">Canal de preço</div>
-          <div className="flex flex-wrap gap-1.5">
-            {DESCONTOS.map((d, i) => (
-              <button
-                key={i}
-                onClick={() => setCanalPreco(i)}
-                className={`text-xs px-2.5 py-1 rounded-lg font-medium transition-colors ${
-                  canalPreco === i
-                    ? 'bg-[#B82020] text-white'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                }`}
-              >
-                {d.label}
-              </button>
-            ))}
-          </div>
+    <div className="space-y-4 max-w-5xl">
+      <div>
+        <h1 className="text-xl font-bold text-gray-900">Estoque</h1>
+        <p className="text-xs text-gray-500 mt-0.5">{totalUnidades.toLocaleString('pt-BR')} un · R$ {totalValor.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}</p>
+      </div>
+
+      {/* Seletor de canal de preço */}
+      <div className="bg-white border border-gray-200 rounded-xl p-3">
+        <div className="text-xs text-gray-500 mb-2 font-medium">Canal de preço</div>
+        <div className="flex flex-wrap gap-1.5">
+          {DESCONTOS.map((d, i) => (
+            <button
+              key={i}
+              onClick={() => setCanalPreco(i)}
+              className={`text-xs px-2.5 py-1.5 rounded-lg font-medium transition-colors ${
+                canalPreco === i ? 'bg-[#B82020] text-white' : 'bg-gray-100 text-gray-600 active:bg-gray-200'
+              }`}
+            >
+              {d.label}
+            </button>
+          ))}
         </div>
       </div>
 
       {/* Cards de produtos */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {products.map(p => {
           const colors = SKU_COLORS[p.sku] ?? { bg: 'bg-gray-50', border: 'border-gray-200', dot: 'bg-gray-400' }
           const isEditing = editando === p.id

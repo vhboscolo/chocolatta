@@ -1,9 +1,10 @@
-import { NavLink, Outlet } from 'react-router-dom'
+import { useState } from 'react'
+import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import {
   Users, Package, Megaphone, ShoppingCart,
-  LayoutDashboard, ChevronRight, Bell
+  LayoutDashboard, Bell, Menu, X
 } from 'lucide-react'
-import { mockProducts } from '../lib/mockData'
+import { useProducts } from '../hooks/useData'
 import { differenceInDays, parseISO } from 'date-fns'
 
 const navItems = [
@@ -14,35 +15,41 @@ const navItems = [
   { to: '/pedidos', icon: ShoppingCart, label: 'Pedidos' },
 ]
 
-function getExpiryAlerts() {
-  const today = new Date()
-  return mockProducts.filter(p => {
-    if (!p.expiry_date) return false
-    const days = differenceInDays(parseISO(p.expiry_date), today)
-    return days <= 30
-  }).length
+const pageTitles: Record<string, string> = {
+  '/': 'Dashboard',
+  '/leads': 'Leads',
+  '/estoque': 'Estoque',
+  '/campanhas': 'Campanhas',
+  '/pedidos': 'Pedidos',
 }
 
 export default function Layout() {
-  const alerts = getExpiryAlerts()
+  const [menuAberto, setMenuAberto] = useState(false)
+  const location = useLocation()
+  const { data: products } = useProducts()
+
+  const alerts = products.filter(p => {
+    if (!p.expiry_date) return false
+    return differenceInDays(parseISO(p.expiry_date), new Date()) <= 30
+  }).length
+
+  const titulo = pageTitles[location.pathname] ?? 'CRM'
 
   return (
-    <div className="flex h-screen overflow-hidden bg-gray-100">
-      {/* Sidebar */}
-      <aside className="w-60 flex-shrink-0 flex flex-col bg-[#1E2535] text-white">
-        {/* Logo */}
-        <div className="px-5 py-6 border-b border-white/10">
+    <div className="flex h-[100dvh] overflow-hidden bg-gray-100">
+
+      {/* ── Sidebar desktop (md+) ── */}
+      <aside className="hidden md:flex w-56 flex-shrink-0 flex-col bg-[#1E2535] text-white">
+        <div className="px-4 py-5 border-b border-white/10">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-[#B82020] flex items-center justify-center text-white font-bold text-sm">S</div>
+            <div className="w-7 h-7 rounded-lg bg-[#B82020] flex items-center justify-center text-white font-bold text-xs flex-shrink-0">S</div>
             <div>
               <div className="font-bold text-sm tracking-wide leading-none">SÖLEN</div>
-              <div className="text-[10px] text-white/50 uppercase tracking-widest mt-0.5">CRM Biscolata</div>
+              <div className="text-[9px] text-white/50 uppercase tracking-widest mt-0.5">CRM Biscolata</div>
             </div>
           </div>
         </div>
-
-        {/* Nav */}
-        <nav className="flex-1 py-4 px-2 space-y-0.5">
+        <nav className="flex-1 py-3 px-2 space-y-0.5">
           {navItems.map(({ to, icon: Icon, label }) => (
             <NavLink
               key={to}
@@ -50,49 +57,120 @@ export default function Layout() {
               end={to === '/'}
               className={({ isActive }) =>
                 `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
-                  isActive
-                    ? 'bg-[#B82020] text-white'
-                    : 'text-white/60 hover:text-white hover:bg-white/10'
+                  isActive ? 'bg-[#B82020] text-white' : 'text-white/60 hover:text-white hover:bg-white/10'
                 }`
               }
             >
-              <Icon size={16} />
+              <Icon size={15} />
               <span>{label}</span>
             </NavLink>
           ))}
         </nav>
-
-        {/* Rodapé */}
-        <div className="px-4 py-4 border-t border-white/10">
-          <div className="text-[11px] text-white/40 mb-1">Aris Importação & Exportação</div>
-          <div className="text-[11px] text-white/30">vendas@arisimportacao.com</div>
+        <div className="px-4 py-3 border-t border-white/10">
+          <div className="text-[10px] text-white/40 mb-0.5">Aris Importação & Exportação</div>
+          <div className="text-[10px] text-white/30">vendas@arisimportacao.com</div>
         </div>
       </aside>
 
-      {/* Main */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Topbar */}
-        <header className="h-14 bg-white border-b border-gray-200 flex items-center justify-between px-6 flex-shrink-0">
-          <div className="flex items-center gap-1 text-sm text-gray-400">
-            <ChevronRight size={14} />
-            <span>Sistema CRM</span>
+      {/* ── Drawer menu mobile ── */}
+      {menuAberto && (
+        <div className="fixed inset-0 z-50 md:hidden">
+          {/* Overlay */}
+          <div className="absolute inset-0 bg-black/50" onClick={() => setMenuAberto(false)} />
+          {/* Painel */}
+          <div className="absolute inset-y-0 left-0 w-64 bg-[#1E2535] flex flex-col shadow-2xl">
+            <div className="flex items-center justify-between px-4 py-5 border-b border-white/10">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-[#B82020] flex items-center justify-center text-white font-bold text-xs">S</div>
+                <div>
+                  <div className="font-bold text-sm text-white">SÖLEN</div>
+                  <div className="text-[9px] text-white/50 uppercase tracking-widest">CRM Biscolata</div>
+                </div>
+              </div>
+              <button onClick={() => setMenuAberto(false)} className="text-white/60 hover:text-white p-1">
+                <X size={18} />
+              </button>
+            </div>
+            <nav className="flex-1 py-3 px-2 space-y-0.5">
+              {navItems.map(({ to, icon: Icon, label }) => (
+                <NavLink
+                  key={to}
+                  to={to}
+                  end={to === '/'}
+                  onClick={() => setMenuAberto(false)}
+                  className={({ isActive }) =>
+                    `flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium transition-all ${
+                      isActive ? 'bg-[#B82020] text-white' : 'text-white/60 hover:text-white hover:bg-white/10'
+                    }`
+                  }
+                >
+                  <Icon size={16} />
+                  <span>{label}</span>
+                </NavLink>
+              ))}
+            </nav>
+            <div className="px-4 py-4 border-t border-white/10">
+              <div className="text-[10px] text-white/40">Aris Importação & Exportação</div>
+            </div>
           </div>
+        </div>
+      )}
+
+      {/* ── Main ── */}
+      <div className="flex-1 flex flex-col overflow-hidden min-w-0">
+
+        {/* Topbar */}
+        <header className="h-14 bg-white border-b border-gray-200 flex items-center justify-between px-4 flex-shrink-0">
           <div className="flex items-center gap-3">
+            {/* Botão menu mobile */}
+            <button
+              onClick={() => setMenuAberto(true)}
+              className="md:hidden text-gray-500 hover:text-gray-700 p-1 -ml-1"
+            >
+              <Menu size={20} />
+            </button>
+            <span className="font-semibold text-gray-800 text-sm">{titulo}</span>
+          </div>
+          <div className="flex items-center gap-2">
             {alerts > 0 && (
-              <div className="flex items-center gap-1.5 bg-amber-50 text-amber-700 text-xs font-medium px-3 py-1.5 rounded-full border border-amber-200">
-                <Bell size={12} />
-                {alerts} validade(s) próximas
+              <div className="flex items-center gap-1 bg-amber-50 text-amber-700 text-xs font-medium px-2 py-1 rounded-full border border-amber-200">
+                <Bell size={11} />
+                <span className="hidden sm:inline">{alerts} validade{alerts > 1 ? 's' : ''}</span>
+                <span className="sm:hidden">{alerts}</span>
               </div>
             )}
-            <div className="w-8 h-8 rounded-full bg-[#B82020] flex items-center justify-center text-white text-xs font-bold">VH</div>
+            <div className="w-7 h-7 rounded-full bg-[#B82020] flex items-center justify-center text-white text-xs font-bold flex-shrink-0">VH</div>
           </div>
         </header>
 
         {/* Content */}
-        <main className="flex-1 overflow-auto p-6">
+        <main className="flex-1 overflow-auto p-3 md:p-5 pb-20 md:pb-5">
           <Outlet />
         </main>
       </div>
+
+      {/* ── Bottom nav mobile ── */}
+      <nav className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-white border-t border-gray-200 flex">
+        {navItems.map(({ to, icon: Icon, label }) => (
+          <NavLink
+            key={to}
+            to={to}
+            end={to === '/'}
+            className={({ isActive }) =>
+              `flex-1 flex flex-col items-center justify-center py-2 gap-0.5 text-[10px] font-medium transition-colors ${
+                isActive ? 'text-[#B82020]' : 'text-gray-400'
+              }`
+            }
+          >
+            {({ isActive }) => (
+              <>
+                <Icon size={20} strokeWidth={isActive ? 2.5 : 1.5} />
+                <span>{label}</span>
+              </>
+            )}
+          </NavLink>
+        ))}
+      </nav>
     </div>
   )
 }
