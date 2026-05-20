@@ -269,3 +269,46 @@ export async function cancelFollowUpTask(id: string): Promise<void> {
     .from('follow_up_tasks').update({ status: 'cancelado' }).eq('id', id)
   if (error) throw error
 }
+
+// ── Feature #8: bulk contact creation (from scrape) ──────────────────────
+
+export async function createContactsBulk(
+  contacts: Omit<Contact, 'id' | 'created_at' | 'updated_at'>[],
+): Promise<Contact[]> {
+  if (!contacts.length) return []
+  const enriched = contacts.map(c => ({
+    ...c,
+    updated_at: new Date().toISOString(),
+  }))
+  const { data, error } = await supabase
+    .from('contacts')
+    .insert(enriched)
+    .select()
+  if (error) throw error
+  return data ?? []
+}
+
+/** Save lat/lng to an existing contact */
+export async function saveContactCoords(
+  id: string,
+  lat: number,
+  lng: number,
+): Promise<void> {
+  const { error } = await supabase
+    .from('contacts')
+    .update({ lat, lng, updated_at: new Date().toISOString() })
+    .eq('id', id)
+  if (error) throw error
+}
+
+/** Fetch contacts that have coordinates (for route planning) */
+export async function fetchContactsWithCoords(): Promise<Contact[]> {
+  const { data, error } = await supabase
+    .from('contacts')
+    .select('*')
+    .not('lat', 'is', null)
+    .not('lng', 'is', null)
+    .order('name')
+  if (error) throw error
+  return data ?? []
+}

@@ -93,4 +93,25 @@ export function useTrackedLinks(contactId: string | null) {
   return { data, setData }
 }
 
+/** Contacts with lat/lng — for route planning */
+export function useContactsWithCoords() {
+  const [data, setData] = useState<Contact[]>([])
+  const [loading, setLoading] = useState(IS_CONFIGURED)
+  const reload = useCallback(async () => {
+    if (!IS_CONFIGURED) {
+      // In mock mode return contacts that happen to have coords in mock data
+      setData(mockContacts.filter(c => c.lat != null && c.lng != null))
+      return
+    }
+    try {
+      setLoading(true)
+      const result = await db.fetchContactsWithCoords()
+      setData(result)
+    } catch { setData([]) }
+    finally { setLoading(false) }
+  }, [])
+  useEffect(() => { reload() }, [reload])
+  return { data, setData, loading, reload }
+}
+
 export { IS_CONFIGURED }

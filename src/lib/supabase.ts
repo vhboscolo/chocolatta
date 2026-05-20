@@ -31,8 +31,25 @@ export interface Contact {
   tags?: string[]
   notes?: string
   source?: string
+  // Geographic coordinates (populated from Apify scrape or Nominatim geocoding)
+  lat?: number
+  lng?: number
+  // Lead lifecycle stage (frio = never contacted)
+  lead_status?: 'frio' | 'contactado' | 'interessado' | 'proposta' | 'cliente'
   created_at: string
   updated_at: string
+}
+
+// ── Scrape jobs (Apify run tracking) ──────────────────────────────────────
+export interface ScrapeJob {
+  id: string
+  apify_run_id?: string
+  search_query: string
+  location: string
+  status: 'running' | 'completed' | 'failed'
+  result_count: number
+  leads_created: number
+  created_at: string
 }
 
 export interface Product {
