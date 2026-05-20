@@ -2,13 +2,24 @@ import { useState } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import {
   Users, Package, Megaphone, ShoppingCart,
-  LayoutDashboard, Bell, Menu, X
+  LayoutDashboard, Bell, Menu, X, CalendarCheck
 } from 'lucide-react'
-import { useProducts } from '../hooks/useData'
+import { useProducts, IS_CONFIGURED } from '../hooks/useData'
 import { differenceInDays, parseISO } from 'date-fns'
 
+// Full nav — sidebar desktop
 const navItems = [
-  { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
+  { to: '/', icon: CalendarCheck, label: 'Agenda' },
+  { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+  { to: '/leads', icon: Users, label: 'Leads' },
+  { to: '/estoque', icon: Package, label: 'Estoque' },
+  { to: '/campanhas', icon: Megaphone, label: 'Campanhas' },
+  { to: '/pedidos', icon: ShoppingCart, label: 'Pedidos' },
+]
+
+// Bottom nav — mobile (5 items, Dashboard acessível via drawer)
+const bottomNavItems = [
+  { to: '/', icon: CalendarCheck, label: 'Agenda' },
   { to: '/leads', icon: Users, label: 'Leads' },
   { to: '/estoque', icon: Package, label: 'Estoque' },
   { to: '/campanhas', icon: Megaphone, label: 'Campanhas' },
@@ -16,7 +27,8 @@ const navItems = [
 ]
 
 const pageTitles: Record<string, string> = {
-  '/': 'Dashboard',
+  '/': 'Agenda do Dia',
+  '/dashboard': 'Dashboard',
   '/leads': 'Leads',
   '/estoque': 'Estoque',
   '/campanhas': 'Campanhas',
@@ -49,7 +61,7 @@ export default function Layout() {
             </div>
           </div>
         </div>
-        <nav className="flex-1 py-3 px-2 space-y-0.5">
+        <nav className="flex-1 py-3 px-2 space-y-0.5 overflow-auto">
           {navItems.map(({ to, icon: Icon, label }) => (
             <NavLink
               key={to}
@@ -66,9 +78,15 @@ export default function Layout() {
             </NavLink>
           ))}
         </nav>
-        <div className="px-4 py-3 border-t border-white/10">
-          <div className="text-[10px] text-white/40 mb-0.5">Aris Importação & Exportação</div>
-          <div className="text-[10px] text-white/30">vendas@arisimportacao.com</div>
+        <div className="px-4 py-3 border-t border-white/10 space-y-1">
+          {/* Indicador de conexão */}
+          <div className="flex items-center gap-1.5">
+            <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${IS_CONFIGURED ? 'bg-green-400' : 'bg-amber-400'}`} />
+            <span className="text-[10px] text-white/40">
+              {IS_CONFIGURED ? 'Supabase conectado' : 'Modo demonstração'}
+            </span>
+          </div>
+          <div className="text-[10px] text-white/30">Aris Importação & Exportação</div>
         </div>
       </aside>
 
@@ -91,7 +109,7 @@ export default function Layout() {
                 <X size={18} />
               </button>
             </div>
-            <nav className="flex-1 py-3 px-2 space-y-0.5">
+            <nav className="flex-1 py-3 px-2 space-y-0.5 overflow-auto">
               {navItems.map(({ to, icon: Icon, label }) => (
                 <NavLink
                   key={to}
@@ -109,8 +127,14 @@ export default function Layout() {
                 </NavLink>
               ))}
             </nav>
-            <div className="px-4 py-4 border-t border-white/10">
-              <div className="text-[10px] text-white/40">Aris Importação & Exportação</div>
+            <div className="px-4 py-4 border-t border-white/10 space-y-1">
+              <div className="flex items-center gap-1.5">
+                <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${IS_CONFIGURED ? 'bg-green-400' : 'bg-amber-400'}`} />
+                <span className="text-[10px] text-white/40">
+                  {IS_CONFIGURED ? 'Supabase conectado' : 'Modo demonstração'}
+                </span>
+              </div>
+              <div className="text-[10px] text-white/30">Aris Importação & Exportação</div>
             </div>
           </div>
         </div>
@@ -132,6 +156,12 @@ export default function Layout() {
             <span className="font-semibold text-gray-800 text-sm">{titulo}</span>
           </div>
           <div className="flex items-center gap-2">
+            {/* Badge modo demo — mobile */}
+            {!IS_CONFIGURED && (
+              <span className="md:hidden text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-600 border border-amber-200">
+                Demo
+              </span>
+            )}
             {alerts > 0 && (
               <div className="flex items-center gap-1 bg-amber-50 text-amber-700 text-xs font-medium px-2 py-1 rounded-full border border-amber-200">
                 <Bell size={11} />
@@ -149,9 +179,9 @@ export default function Layout() {
         </main>
       </div>
 
-      {/* ── Bottom nav mobile ── */}
+      {/* ── Bottom nav mobile (5 itens) ── */}
       <nav className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-white border-t border-gray-200 flex">
-        {navItems.map(({ to, icon: Icon, label }) => (
+        {bottomNavItems.map(({ to, icon: Icon, label }) => (
           <NavLink
             key={to}
             to={to}

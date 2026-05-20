@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react'
 import {
-  Search, Plus, MessageCircle, Mail, Upload,
+  Search, Plus, MessageCircle, Mail, Upload, Download,
   ChevronDown, X, Phone, Building2, Tag, FileText
 } from 'lucide-react'
 import type { Contact, Interaction } from '../lib/supabase'
@@ -26,6 +26,31 @@ const statusColors: Record<string, string> = {
 const statusLabels: Record<string, string> = {
   novo: 'Novo', contatado: 'Contatado', 'proposta-enviada': 'Proposta Enviada',
   negociando: 'Negociando', fechado: 'Fechado', perdido: 'Perdido',
+}
+
+function exportCSV(contacts: Contact[]) {
+  const rows = contacts.map(c => ({
+    nome: c.name,
+    empresa: c.company ?? '',
+    email: c.email ?? '',
+    telefone: c.phone ?? '',
+    segmento: c.segment ?? '',
+    status: c.status,
+    notas: c.notes ?? '',
+    fonte: c.source ?? '',
+    criado_em: c.created_at,
+    atualizado_em: c.updated_at,
+  }))
+  const csv = Papa.unparse(rows)
+  const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `leads-solen-${new Date().toISOString().split('T')[0]}.csv`
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+  URL.revokeObjectURL(url)
 }
 
 function buildWhatsApp(phone: string, name: string, company?: string) {
@@ -132,6 +157,14 @@ export default function Leads() {
               <p className="text-xs text-gray-400">{filtered.length} contato{filtered.length !== 1 ? 's' : ''}</p>
             </div>
             <div className="flex items-center gap-1.5">
+              <button
+                onClick={() => exportCSV(filtered)}
+                title="Exportar como CSV"
+                className="flex items-center gap-1 text-sm font-medium text-gray-600 border border-gray-200 px-2.5 py-1.5 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                <Download size={13} />
+                <span className="hidden sm:inline">Exportar</span>
+              </button>
               <button
                 onClick={() => setShowImport(true)}
                 className="flex items-center gap-1 text-sm font-medium text-gray-600 border border-gray-200 px-2.5 py-1.5 rounded-lg hover:bg-gray-50 transition-colors"

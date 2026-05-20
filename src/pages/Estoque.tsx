@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { differenceInDays, parseISO, format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { Package, TrendingDown, Edit2, Check, X } from 'lucide-react'
+import { Package, TrendingDown, Edit2, Check, X, Calculator } from 'lucide-react'
 import type { Product } from '../lib/supabase'
 import { useProducts, IS_CONFIGURED } from '../hooks/useData'
 import * as db from '../lib/db'
@@ -50,6 +50,16 @@ export default function Estoque() {
   const [editForm, setEditForm] = useState<Partial<Product>>({})
   const [showBaixa, setShowBaixa] = useState<Product | null>(null)
   const [baixaQtd, setBaixaQtd] = useState(0)
+
+  // Calculadora rápida
+  const [calcProdId, setCalcProdId] = useState('')
+  const [calcQtd, setCalcQtd] = useState(100)
+  const [calcDescontoIdx, setCalcDescontoIdx] = useState(0)
+  const calcProd = products.find(p => p.id === calcProdId)
+  const calcDescPct = DESCONTOS[calcDescontoIdx].pct
+  const calcPrecoUnit = calcProd ? calcProd.unit_price * (1 - calcDescPct / 100) : 0
+  const calcTotal = calcPrecoUnit * calcQtd
+  const calcEconomia = calcProd ? (calcProd.unit_price - calcPrecoUnit) * calcQtd : 0
 
   const totalValor = products.reduce((s, p) => s + p.quantity * p.unit_price, 0)
   const totalUnidades = products.reduce((s, p) => s + p.quantity, 0)
@@ -276,6 +286,82 @@ export default function Estoque() {
             </tbody>
           </table>
         </div>
+      </div>
+
+      {/* Calculadora rápida */}
+      <div className="bg-white rounded-xl border border-gray-200 p-5">
+        <h2 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+          <Calculator size={16} className="text-[#B82020]" />
+          Calculadora Rápida
+        </h2>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
+          <div>
+            <label className="text-xs text-gray-500 block mb-1">Produto</label>
+            <select
+              value={calcProdId}
+              onChange={e => setCalcProdId(e.target.value)}
+              className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#B82020]/30"
+            >
+              <option value="">Selecionar...</option>
+              {products.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="text-xs text-gray-500 block mb-1">Quantidade (un.)</label>
+            <input
+              type="number"
+              min={1}
+              value={calcQtd}
+              onChange={e => setCalcQtd(Math.max(1, +e.target.value))}
+              className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#B82020]/30"
+            />
+          </div>
+          <div>
+            <label className="text-xs text-gray-500 block mb-1">Canal de preço</label>
+            <select
+              value={calcDescontoIdx}
+              onChange={e => setCalcDescontoIdx(+e.target.value)}
+              className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#B82020]/30"
+            >
+              {DESCONTOS.map((d, i) => <option key={i} value={i}>{d.label}</option>)}
+            </select>
+          </div>
+        </div>
+        {calcProd ? (
+          <div className="bg-gray-50 rounded-xl p-4 grid grid-cols-3 divide-x divide-gray-200">
+            <div className="text-center px-3">
+              <div className="text-xs text-gray-400 mb-1">Preço unit.</div>
+              <div className="font-bold text-gray-900 text-lg">
+                R$ {calcPrecoUnit.toFixed(2).replace('.', ',')}
+              </div>
+              {calcDescPct > 0 && (
+                <div className="text-xs text-gray-400 line-through">
+                  R$ {calcProd.unit_price.toFixed(2).replace('.', ',')}
+                </div>
+              )}
+            </div>
+            <div className="text-center px-3">
+              <div className="text-xs text-gray-400 mb-1">Total</div>
+              <div className="text-2xl font-bold text-[#B82020]">
+                R$ {calcTotal.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}
+              </div>
+              <div className="text-xs text-gray-400">{calcQtd.toLocaleString('pt-BR')} un.</div>
+            </div>
+            <div className="text-center px-3">
+              <div className="text-xs text-gray-400 mb-1">Economia</div>
+              <div className={`font-bold text-lg ${calcDescPct > 0 ? 'text-green-600' : 'text-gray-400'}`}>
+                {calcDescPct > 0
+                  ? `R$ ${calcEconomia.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}`
+                  : '—'}
+              </div>
+              {calcDescPct > 0 && <div className="text-xs text-green-600">{calcDescPct}% off</div>}
+            </div>
+          </div>
+        ) : (
+          <div className="bg-gray-50 rounded-xl p-5 text-center text-sm text-gray-400">
+            Selecione um produto para calcular
+          </div>
+        )}
       </div>
 
       {/* Modal baixa de estoque */}

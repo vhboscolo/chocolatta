@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
 import Layout from './components/Layout'
+import Agenda from './pages/Agenda'
 import Dashboard from './pages/Dashboard'
 import Leads from './pages/Leads'
 import Estoque from './pages/Estoque'
@@ -19,7 +20,8 @@ export default function App() {
       />
       <Routes>
         <Route path="/" element={<Layout />}>
-          <Route index element={<Dashboard />} />
+          <Route index element={<Agenda />} />
+          <Route path="dashboard" element={<Dashboard />} />
           <Route path="leads" element={<Leads />} />
           <Route path="estoque" element={<Estoque />} />
           <Route path="campanhas" element={<Campanhas />} />

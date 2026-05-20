@@ -1,12 +1,140 @@
 import { useState } from 'react'
-import { Plus, ShoppingCart, FileText, X, ChevronDown, ChevronUp } from 'lucide-react'
-import { mockContacts, mockProducts } from '../lib/mockData'
-import type { Order } from '../lib/supabase'
-import { useOrders, IS_CONFIGURED } from '../hooks/useData'
+import { Plus, ShoppingCart, X, ChevronDown, ChevronUp, Printer } from 'lucide-react'
+import { mockProducts } from '../lib/mockData'
+import type { Contact, Order } from '../lib/supabase'
+import { useOrders, useContacts, IS_CONFIGURED } from '../hooks/useData'
 import * as db from '../lib/db'
 import { format, parseISO } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import toast from 'react-hot-toast'
+
+function gerarPDF(order: Order, contact: Contact | undefined) {
+  const dataEmissao = format(new Date(), "d 'de' MMMM 'de' yyyy", { locale: ptBR })
+  const subtotal = (order.total ?? 0) / (1 - (order.discount_pct ?? 0) / 100)
+  const desconto = subtotal - (order.total ?? 0)
+
+  const html = `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Proposta — ${contact?.name ?? 'Cliente'}</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: Arial, Helvetica, sans-serif; color: #1C1C1C; padding: 48px; max-width: 780px; margin: 0 auto; font-size: 14px; line-height: 1.5; }
+    .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 36px; padding-bottom: 20px; border-bottom: 3px solid #B82020; }
+    .logo-name { font-size: 26px; font-weight: 900; color: #B82020; letter-spacing: -0.5px; }
+    .logo-sub { font-size: 10px; color: #888; letter-spacing: 2px; text-transform: uppercase; margin-top: 2px; }
+    .doc-info { text-align: right; }
+    .doc-title { font-size: 18px; font-weight: 700; color: #1C1C1C; }
+    .doc-meta { font-size: 12px; color: #666; margin-top: 4px; }
+    .doc-num { font-size: 11px; color: #aaa; margin-top: 2px; font-family: monospace; }
+    .section { margin-bottom: 28px; }
+    .section-label { font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px; color: #aaa; font-weight: 700; margin-bottom: 10px; }
+    .client-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; background: #f9f9f9; border-radius: 8px; padding: 16px; }
+    .client-field label { font-size: 11px; color: #888; display: block; margin-bottom: 2px; }
+    .client-field span { font-weight: 600; font-size: 14px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 4px; }
+    th { font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: #888; font-weight: 700; padding: 10px 14px; background: #f5f5f5; text-align: left; }
+    th:last-child { text-align: right; }
+    td { padding: 12px 14px; border-bottom: 1px solid #f0f0f0; vertical-align: top; }
+    td:last-child { text-align: right; font-weight: 500; }
+    .subtotals { margin-top: 4px; border-top: 2px solid #eee; }
+    .subtotals td { border-bottom: none; color: #666; font-size: 13px; }
+    .subtotals td:first-child { padding-left: 14px; }
+    .total-row td { font-size: 17px; font-weight: 800; color: #B82020; border-top: 2px solid #ddd; border-bottom: none; padding-top: 14px; }
+    .badge { display: inline-block; background: #FEF3F2; color: #B82020; font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 99px; border: 1px solid #FECACA; }
+    .notes-box { background: #f9f9f9; border-radius: 8px; padding: 14px; font-size: 13px; color: #444; line-height: 1.6; }
+    .footer { margin-top: 48px; padding-top: 20px; border-top: 1px solid #eee; font-size: 11px; color: #999; }
+    .footer strong { color: #666; }
+    @media print { body { padding: 24px; } }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div>
+      <div class="logo-name">SÖLEN</div>
+      <div class="logo-sub">Biscolata · Aris Importação</div>
+    </div>
+    <div class="doc-info">
+      <div class="doc-title">Proposta Comercial</div>
+      <div class="doc-meta">${dataEmissao}</div>
+      <div class="doc-num">Nº ${order.id.slice(-8).toUpperCase()}</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-label">Cliente</div>
+    <div class="client-grid">
+      <div class="client-field"><label>Nome</label><span>${contact?.name ?? '—'}</span></div>
+      <div class="client-field"><label>Empresa</label><span>${contact?.company ?? '—'}</span></div>
+      <div class="client-field"><label>E-mail</label><span>${contact?.email ?? '—'}</span></div>
+      <div class="client-field"><label>Telefone</label><span>${contact?.phone ?? '—'}</span></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-label">Produtos / Serviços</div>
+    <table>
+      <thead>
+        <tr>
+          <th style="width:50%">Descrição</th>
+          <th>Canal</th>
+          <th>Qtd</th>
+          <th>Total</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>
+            <strong>Linha Sölen Biscolata</strong><br>
+            <span style="font-size:12px;color:#888">Chocolates turcos premium — distribuidora oficial Brasil</span>
+          </td>
+          <td style="text-transform:capitalize">${order.channel ?? '—'}</td>
+          <td>—</td>
+          <td>R$ ${subtotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+        </tr>
+      </tbody>
+      <tfoot class="subtotals">
+        ${order.discount_pct > 0 ? `
+        <tr>
+          <td colspan="3" style="color:#16a34a">Desconto ${order.discount_pct}%</td>
+          <td style="color:#16a34a">-R$ ${desconto.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+        </tr>` : ''}
+        <tr class="total-row">
+          <td colspan="3">Total</td>
+          <td>R$ ${(order.total ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+
+  ${order.notes ? `
+  <div class="section">
+    <div class="section-label">Observações</div>
+    <div class="notes-box">${order.notes}</div>
+  </div>` : ''}
+
+  <div class="section">
+    <div class="section-label">Validade</div>
+    <p style="font-size:13px;color:#555">Esta proposta é válida por <strong>7 dias</strong> a partir da data de emissão. Pagamento: PIX, transferência bancária ou boleto. Entrega: São Paulo capital e Grande SP em 24h.</p>
+  </div>
+
+  <div class="footer">
+    <strong>Aris Importação & Exportação Ltda.</strong> — Distribuidora oficial Sölen Biscolata no Brasil<br>
+    vendas@arisimportacao.com.br · Este documento foi gerado pelo CRM Sölen e não possui validade fiscal.
+  </div>
+</body>
+</html>`
+
+  const win = window.open('', '_blank', 'width=900,height=700')
+  if (!win) {
+    toast.error('Permita pop-ups para gerar o PDF')
+    return
+  }
+  win.document.write(html)
+  win.document.close()
+  setTimeout(() => win.print(), 600)
+}
 
 const statusColors: Record<string, string> = {
   proposta: 'bg-gray-100 text-gray-600',
@@ -40,6 +168,7 @@ function getDescontoSugerido(total: number) {
 
 export default function Pedidos() {
   const { data: orders, setData: setOrders, reload: reloadOrders } = useOrders()
+  const { data: contacts } = useContacts()
   const [showNovo, setShowNovo] = useState(false)
   const [expandido, setExpandido] = useState<string | null>(null)
   const [filtroStatus, setFiltroStatus] = useState('')
@@ -108,7 +237,7 @@ export default function Pedidos() {
       {/* Lista de pedidos */}
       <div className="space-y-3">
         {filtered.map(o => {
-          const contato = mockContacts.find(c => c.id === o.contact_id)
+          const contato = contacts.find(c => c.id === o.contact_id)
           const isExpanded = expandido === o.id
           const desconto = getDescontoSugerido(o.total ?? 0)
 
@@ -185,9 +314,12 @@ export default function Pedidos() {
                       ))}
                     </div>
                   </div>
-                  <button className="flex items-center gap-1.5 text-sm font-medium text-[#B82020] hover:text-[#9E1C1C] transition-colors">
-                    <FileText size={14} />
-                    Gerar PDF da proposta
+                  <button
+                    onClick={() => gerarPDF(o, contato)}
+                    className="flex items-center gap-1.5 text-sm font-medium text-[#B82020] hover:text-[#9E1C1C] transition-colors"
+                  >
+                    <Printer size={14} />
+                    Gerar PDF / Imprimir proposta
                   </button>
                 </div>
               )}
@@ -225,6 +357,7 @@ export default function Pedidos() {
 type ItemForm = { productId: string; quantity: number; unitPrice: number }
 
 function NovaProposta({ onClose, onSave }: { onClose: () => void; onSave: (o: Order) => void }) {
+  const { data: contacts } = useContacts()
   const [contactId, setContactId] = useState('')
   const [canal, setCanal] = useState('direto')
   const [notas, setNotas] = useState('')
@@ -285,7 +418,7 @@ function NovaProposta({ onClose, onSave }: { onClose: () => void; onSave: (o: Or
               className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#B82020]/30"
             >
               <option value="">Selecionar cliente</option>
-              {mockContacts.map(c => (
+              {contacts.map(c => (
                 <option key={c.id} value={c.id}>{c.name} {c.company ? `— ${c.company}` : ''}</option>
               ))}
             </select>
