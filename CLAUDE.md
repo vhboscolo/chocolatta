@@ -9,6 +9,17 @@ Sistema de gestão comercial para Aris Importação & Exportação — distribui
 - **Roteamento:** React Router DOM v7
 - **Deploy:** Vercel
 
+## Repositório & Deploy
+- **GitHub:** https://github.com/vhboscolo/chocolatta (branch `master`)
+- **Vercel:** https://crm-solen.vercel.app (conectado ao GitHub — push = deploy automático)
+
+**Fluxo após cada alteração:**
+```bash
+git add <arquivos>
+git commit -m "descrição"
+git push origin master   # ← Vercel detecta e faz deploy automático
+```
+
 ## Iniciar
 ```bash
 npm install
@@ -22,13 +33,14 @@ src/
     supabase.ts    # cliente Supabase + tipos
     mockData.ts    # dados de demonstração (pré-Supabase)
   components/
-    Layout.tsx     # sidebar + topbar
+    Layout.tsx     # sidebar + topbar + bottom nav mobile
   pages/
-    Dashboard.tsx  # KPIs, pipeline, alertas
-    Leads.tsx      # CRM: listagem, ficha, histórico, importação CSV
-    Estoque.tsx    # SKUs, validades, tabela de preços por canal
+    Agenda.tsx     # tela home: ações do dia priorizadas (urgente/atenção/em andamento)
+    Dashboard.tsx  # KPIs, pipeline, alertas (/dashboard)
+    Leads.tsx      # CRM: listagem, ficha, histórico, importação/exportação CSV
+    Estoque.tsx    # SKUs, validades, tabela de preços, calculadora rápida
     Campanhas.tsx  # criação em 3 passos, geração de links WhatsApp
-    Pedidos.tsx    # propostas, status, política de desconto
+    Pedidos.tsx    # propostas, status, PDF, política de desconto
 ```
 
 ## Variáveis de ambiente (.env.local)
