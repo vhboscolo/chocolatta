@@ -3,7 +3,7 @@ import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import {
   Users, Package, Megaphone, ShoppingCart, BookImage,
   LayoutDashboard, Bell, Menu, X, CalendarCheck, KanbanSquare,
-  BarChart3, Repeat,
+  BarChart3, Repeat, Search, Route,
 } from 'lucide-react'
 import { useProducts, IS_CONFIGURED } from '../hooks/useData'
 import { differenceInDays, parseISO } from 'date-fns'
@@ -23,6 +23,13 @@ const navGroups: { title?: string; items: { to: string; icon: any; label: string
       { to: '/leads', icon: Users, label: 'Leads' },
       { to: '/pipeline', icon: KanbanSquare, label: 'Pipeline' },
       { to: '/pedidos', icon: ShoppingCart, label: 'Pedidos' },
+    ],
+  },
+  {
+    title: 'Prospecção',
+    items: [
+      { to: '/prospeccao', icon: Search, label: 'Google Maps' },
+      { to: '/rotas', icon: Route, label: 'Rotas' },
     ],
   },
   {
@@ -55,6 +62,8 @@ const pageTitles: Record<string, string> = {
   '/catalogo': 'Catálogo',
   '/campanhas': 'Campanhas',
   '/sequencias': 'Sequências',
+  '/prospeccao': 'Prospecção Google Maps',
+  '/rotas': 'Otimização de Rotas',
   '/pedidos': 'Pedidos',
 }
 
