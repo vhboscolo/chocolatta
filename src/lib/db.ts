@@ -1,5 +1,8 @@
 import { supabase } from './supabase'
-import type { Contact, Product, Order, Campaign, Template, Interaction } from './supabase'
+import type {
+  Contact, Product, Order, OrderItem, Campaign, Template, Interaction,
+  TrackedLink, FollowUpSequence, FollowUpTask, SequenceStep,
+} from './supabase'
 
 // ── Contacts ──────────────────────────────────────────────
 export async function fetchContacts(): Promise<Contact[]> {
@@ -35,20 +38,77 @@ export async function updateProduct(id: string, updates: Partial<Product>): Prom
 export async function fetchOrders(): Promise<Order[]> {
   const { data, error } = await supabase
     .from('orders')
-    .select('*, contact:contacts(name, company)')
+    .select('*, contact:contacts(name, company, email, phone)')
     .order('created_at', { ascending: false })
   if (error) throw error
   return data ?? []
 }
 
+export async function fetchOrderByToken(token: string): Promise<Order | null> {
+  const { data, error } = await supabase
+    .from('orders')
+    .select('*, contact:contacts(name, company, email, phone)')
+    .eq('public_token', token)
+    .maybeSingle()
+  if (error) throw error
+  return data
+}
+
 export async function createOrder(order: Omit<Order, 'id' | 'created_at'>): Promise<Order> {
-  const { data, error } = await supabase.from('orders').insert(order).select().single()
+  // Auto-generate public_token + valid_until (7 days)
+  const enriched = {
+    ...order,
+    public_token: order.public_token ?? crypto.randomUUID(),
+    valid_until: order.valid_until ?? new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+  }
+  const { data, error } = await supabase.from('orders').insert(enriched).select().single()
   if (error) throw error
   return data
 }
 
 export async function updateOrderStatus(id: string, status: string): Promise<void> {
   const { error } = await supabase.from('orders').update({ status }).eq('id', id)
+  if (error) throw error
+}
+
+export async function updateOrder(id: string, updates: Partial<Order>): Promise<void> {
+  const { error } = await supabase.from('orders').update(updates).eq('id', id)
+  if (error) throw error
+}
+
+export async function incrementOrderView(token: string): Promise<Order | null> {
+  const { data, error } = await supabase.rpc('increment_order_view', { p_token: token })
+  if (error) throw error
+  return data as Order | null
+}
+
+export async function acceptOrder(token: string): Promise<void> {
+  const { error } = await supabase
+    .from('orders')
+    .update({ accepted_at: new Date().toISOString(), status: 'aguardando-pagamento' })
+    .eq('public_token', token)
+  if (error) throw error
+}
+
+export async function rejectOrder(token: string): Promise<void> {
+  const { error } = await supabase
+    .from('orders')
+    .update({ rejected_at: new Date().toISOString(), status: 'cancelado' })
+    .eq('public_token', token)
+  if (error) throw error
+}
+
+// ── Order items ──────────────────────────────────────────
+export async function fetchOrderItems(orderId: string): Promise<OrderItem[]> {
+  const { data, error } = await supabase
+    .from('order_items').select('*, product:products(*)').eq('order_id', orderId)
+  if (error) throw error
+  return data ?? []
+}
+
+export async function createOrderItems(items: Omit<OrderItem, 'id'>[]): Promise<void> {
+  if (!items.length) return
+  const { error } = await supabase.from('order_items').insert(items)
   if (error) throw error
 }
 
@@ -75,10 +135,7 @@ export async function fetchTemplates(): Promise<Template[]> {
 // ── Interactions ──────────────────────────────────────────────
 export async function fetchInteractions(contactId: string): Promise<Interaction[]> {
   const { data, error } = await supabase
-    .from('interactions')
-    .select('*')
-    .eq('contact_id', contactId)
-    .order('created_at', { ascending: false })
+    .from('interactions').select('*').eq('contact_id', contactId).order('created_at', { ascending: false })
   if (error) throw error
   return data ?? []
 }
@@ -96,5 +153,110 @@ export async function deductStock(productId: string, quantity: number): Promise<
   if (fetchErr) throw fetchErr
   const { error } = await supabase
     .from('products').update({ quantity: product.quantity - quantity }).eq('id', productId)
+  if (error) throw error
+}
+
+// ── Feature #2: tracked links ────────────────────────────────
+export async function createTrackedLink(input: {
+  contact_id?: string
+  destination: TrackedLink['destination']
+  destination_id?: string
+  label?: string
+}): Promise<TrackedLink> {
+  const token = crypto.randomUUID().split('-')[0]   // 8 chars enough for clean URL
+  const { data, error } = await supabase
+    .from('tracked_links').insert({ ...input, token, click_count: 0 }).select().single()
+  if (error) throw error
+  return data
+}
+
+export async function fetchTrackedLink(token: string): Promise<TrackedLink | null> {
+  const { data, error } = await supabase
+    .from('tracked_links').select('*').eq('token', token).maybeSingle()
+  if (error) throw error
+  return data
+}
+
+export async function fetchTrackedLinksByContact(contactId: string): Promise<TrackedLink[]> {
+  const { data, error } = await supabase
+    .from('tracked_links').select('*').eq('contact_id', contactId).order('created_at', { ascending: false })
+  if (error) throw error
+  return data ?? []
+}
+
+export async function fetchAllTrackedLinks(): Promise<TrackedLink[]> {
+  const { data, error } = await supabase
+    .from('tracked_links')
+    .select('*, contact:contacts(name, company)')
+    .order('created_at', { ascending: false })
+    .limit(50)
+  if (error) throw error
+  return data ?? []
+}
+
+export async function incrementLinkClick(token: string): Promise<TrackedLink | null> {
+  const { data, error } = await supabase.rpc('increment_link_click', { p_token: token })
+  if (error) throw error
+  return data as TrackedLink | null
+}
+
+// ── Feature #3: follow-up sequences ──────────────────────────
+export async function fetchSequences(): Promise<FollowUpSequence[]> {
+  const { data, error } = await supabase
+    .from('follow_up_sequences').select('*').order('created_at', { ascending: false })
+  if (error) throw error
+  return data ?? []
+}
+
+export async function createSequence(seq: Omit<FollowUpSequence, 'id' | 'created_at'>): Promise<FollowUpSequence> {
+  const { data, error } = await supabase.from('follow_up_sequences').insert(seq).select().single()
+  if (error) throw error
+  return data
+}
+
+export async function applySequenceToContact(
+  sequence: FollowUpSequence,
+  contactId: string,
+  startDate: Date = new Date(),
+): Promise<FollowUpTask[]> {
+  const tasks = sequence.steps.map((step: SequenceStep, idx: number) => {
+    const d = new Date(startDate)
+    d.setDate(d.getDate() + step.day_offset)
+    return {
+      sequence_id: sequence.id,
+      contact_id: contactId,
+      step_index: idx,
+      scheduled_for: d.toISOString().split('T')[0],
+      action: step.action,
+      template_id: step.template_id,
+      label: step.label,
+      status: 'pendente' as const,
+    }
+  })
+  const { data, error } = await supabase.from('follow_up_tasks').insert(tasks).select()
+  if (error) throw error
+  return data ?? []
+}
+
+export async function fetchFollowUpTasks(): Promise<FollowUpTask[]> {
+  const { data, error } = await supabase
+    .from('follow_up_tasks')
+    .select('*, contact:contacts(name, company, phone, email), template:templates(*)')
+    .order('scheduled_for')
+  if (error) throw error
+  return data ?? []
+}
+
+export async function completeFollowUpTask(id: string): Promise<void> {
+  const { error } = await supabase
+    .from('follow_up_tasks')
+    .update({ status: 'concluido', completed_at: new Date().toISOString() })
+    .eq('id', id)
+  if (error) throw error
+}
+
+export async function cancelFollowUpTask(id: string): Promise<void> {
+  const { error } = await supabase
+    .from('follow_up_tasks').update({ status: 'cancelado' }).eq('id', id)
   if (error) throw error
 }

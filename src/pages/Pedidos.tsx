@@ -1,12 +1,14 @@
 import { useState } from 'react'
-import { Plus, ShoppingCart, X, ChevronDown, ChevronUp, Printer } from 'lucide-react'
+import { Plus, ShoppingCart, X, ChevronDown, ChevronUp, Printer, Link2, Copy, MessageCircle, Mail, Eye, Check } from 'lucide-react'
 import { mockProducts } from '../lib/mockData'
 import type { Contact, Order } from '../lib/supabase'
 import { useOrders, useContacts, IS_CONFIGURED } from '../hooks/useData'
 import * as db from '../lib/db'
-import { format, parseISO } from 'date-fns'
+import { format, parseISO, formatDistanceToNow } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import toast from 'react-hot-toast'
+import { proposalUrl, copyToClipboard, whatsappWithLink, emailWithLink, shortUrl } from '../lib/tracking'
+// (todos os imports acima são consumidos pelo CompartilharProposta no final do arquivo)
 
 function gerarPDF(order: Order, contact: Contact | undefined) {
   const dataEmissao = format(new Date(), "d 'de' MMMM 'de' yyyy", { locale: ptBR })
@@ -321,6 +323,19 @@ export default function Pedidos() {
                     <Printer size={14} />
                     Gerar PDF / Imprimir proposta
                   </button>
+
+                  <CompartilharProposta
+                    order={o}
+                    contato={contato}
+                    onGenerated={async (token) => {
+                      if (IS_CONFIGURED) {
+                        await db.updateOrder(o.id, { public_token: token })
+                        await reloadOrders()
+                      } else {
+                        setOrders(prev => prev.map(x => x.id === o.id ? { ...x, public_token: token } : x))
+                      }
+                    }}
+                  />
                 </div>
               )}
             </div>
@@ -520,6 +535,135 @@ function NovaProposta({ onClose, onSave }: { onClose: () => void; onSave: (o: Or
           </button>
         </div>
       </div>
+    </div>
+  )
+}
+
+// ── Compartilhar proposta (link público + rastreamento) ─────────────────────
+function CompartilharProposta({
+  order,
+  contato,
+  onGenerated,
+}: {
+  order: Order
+  contato: Contact | undefined
+  onGenerated: (token: string) => Promise<void> | void
+}) {
+  const [generating, setGenerating] = useState(false)
+  const token = order.public_token
+  const url = token ? proposalUrl(token) : ''
+
+  async function handleGenerate() {
+    setGenerating(true)
+    try {
+      const newToken = crypto.randomUUID()
+      await onGenerated(newToken)
+      toast.success('Link público gerado!')
+    } catch {
+      toast.error('Erro ao gerar link')
+    } finally {
+      setGenerating(false)
+    }
+  }
+
+  async function handleCopy() {
+    if (!url) return
+    const ok = await copyToClipboard(url)
+    if (ok) toast.success('Link copiado!')
+    else toast.error('Não foi possível copiar')
+  }
+
+  const mensagemBase = `Olá ${contato?.name ?? ''}, segue sua proposta comercial Sölen. Você pode revisar e aceitar diretamente no link:`
+  const assuntoEmail = `Proposta comercial Sölen — Nº ${order.id.slice(-8).toUpperCase()}`
+
+  return (
+    <div className="border-t border-gray-100 pt-3">
+      <div className="flex items-center justify-between mb-2">
+        <label className="text-xs font-medium text-gray-500 flex items-center gap-1.5">
+          <Link2 size={12} />
+          Compartilhar proposta
+        </label>
+        {/* Estatísticas */}
+        <div className="flex items-center gap-2 flex-wrap">
+          {order.view_count != null && order.view_count > 0 && (
+            <span className="inline-flex items-center gap-1 text-[10px] font-medium text-blue-700 bg-blue-50 border border-blue-200 px-1.5 py-0.5 rounded-full">
+              <Eye size={9} />
+              {order.view_count}× {order.last_viewed_at ? `· ${formatDistanceToNow(parseISO(order.last_viewed_at), { addSuffix: true, locale: ptBR })}` : ''}
+            </span>
+          )}
+          {order.accepted_at && (
+            <span className="inline-flex items-center gap-1 text-[10px] font-medium text-green-700 bg-green-50 border border-green-200 px-1.5 py-0.5 rounded-full">
+              <Check size={9} />
+              Aceita em {format(parseISO(order.accepted_at), "d MMM", { locale: ptBR })}
+            </span>
+          )}
+          {order.rejected_at && (
+            <span className="inline-flex items-center gap-1 text-[10px] font-medium text-red-700 bg-red-50 border border-red-200 px-1.5 py-0.5 rounded-full">
+              <X size={9} />
+              Recusada em {format(parseISO(order.rejected_at), "d MMM", { locale: ptBR })}
+            </span>
+          )}
+        </div>
+      </div>
+
+      {!token ? (
+        <button
+          onClick={handleGenerate}
+          disabled={generating}
+          className="flex items-center gap-1.5 text-sm font-medium text-gray-700 border border-gray-200 px-3 py-2 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+        >
+          <Link2 size={13} />
+          {generating ? 'Gerando…' : 'Gerar link público'}
+        </button>
+      ) : (
+        <div className="space-y-2">
+          {/* URL display */}
+          <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">
+            <Link2 size={13} className="text-gray-400 flex-shrink-0" />
+            <code className="text-xs text-gray-700 flex-1 truncate font-mono">{shortUrl(url)}</code>
+            <button
+              onClick={handleCopy}
+              className="flex items-center gap-1 text-xs font-medium text-gray-600 hover:text-[#B82020] transition-colors flex-shrink-0"
+            >
+              <Copy size={11} />
+              Copiar
+            </button>
+          </div>
+
+          {/* Quick share buttons */}
+          <div className="flex flex-wrap gap-2">
+            {contato?.phone && (
+              <a
+                href={whatsappWithLink(contato.phone, mensagemBase, url)}
+                target="_blank"
+                rel="noreferrer"
+                className="flex items-center gap-1.5 text-xs font-medium text-white bg-[#25D366] px-3 py-1.5 rounded-lg hover:bg-[#1da851] transition-colors"
+              >
+                <MessageCircle size={11} />
+                WhatsApp
+              </a>
+            )}
+            {contato?.email && (
+              <a
+                href={emailWithLink(contato.email, assuntoEmail, mensagemBase, url)}
+                className="flex items-center gap-1.5 text-xs font-medium text-blue-700 bg-blue-50 border border-blue-200 px-3 py-1.5 rounded-lg hover:bg-blue-100 transition-colors"
+              >
+                <Mail size={11} />
+                E-mail
+              </a>
+            )}
+            <a
+              href={url}
+              target="_blank"
+              rel="noreferrer"
+              className="flex items-center gap-1.5 text-xs font-medium text-gray-600 border border-gray-200 px-3 py-1.5 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              <Eye size={11} />
+              Abrir proposta
+            </a>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

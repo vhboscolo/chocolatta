@@ -1,37 +1,60 @@
 import { useState } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import {
-  Users, Package, Megaphone, ShoppingCart,
-  LayoutDashboard, Bell, Menu, X, CalendarCheck
+  Users, Package, Megaphone, ShoppingCart, BookImage,
+  LayoutDashboard, Bell, Menu, X, CalendarCheck, KanbanSquare,
+  BarChart3, Repeat,
 } from 'lucide-react'
 import { useProducts, IS_CONFIGURED } from '../hooks/useData'
 import { differenceInDays, parseISO } from 'date-fns'
 
-// Full nav — sidebar desktop
-const navItems = [
-  { to: '/', icon: CalendarCheck, label: 'Agenda' },
-  { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-  { to: '/leads', icon: Users, label: 'Leads' },
-  { to: '/estoque', icon: Package, label: 'Estoque' },
-  { to: '/campanhas', icon: Megaphone, label: 'Campanhas' },
-  { to: '/pedidos', icon: ShoppingCart, label: 'Pedidos' },
+// Full nav — sidebar desktop (organizada em grupos lógicos)
+const navGroups: { title?: string; items: { to: string; icon: any; label: string }[] }[] = [
+  {
+    items: [
+      { to: '/', icon: CalendarCheck, label: 'Agenda' },
+      { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+      { to: '/relatorios', icon: BarChart3, label: 'Relatórios' },
+    ],
+  },
+  {
+    title: 'Vendas',
+    items: [
+      { to: '/leads', icon: Users, label: 'Leads' },
+      { to: '/pipeline', icon: KanbanSquare, label: 'Pipeline' },
+      { to: '/pedidos', icon: ShoppingCart, label: 'Pedidos' },
+    ],
+  },
+  {
+    title: 'Operação',
+    items: [
+      { to: '/estoque', icon: Package, label: 'Estoque' },
+      { to: '/catalogo', icon: BookImage, label: 'Catálogo' },
+      { to: '/campanhas', icon: Megaphone, label: 'Campanhas' },
+      { to: '/sequencias', icon: Repeat, label: 'Sequências' },
+    ],
+  },
 ]
 
-// Bottom nav — mobile (5 items, Dashboard acessível via drawer)
+// Bottom nav — mobile (5 itens essenciais para uso diário)
 const bottomNavItems = [
   { to: '/', icon: CalendarCheck, label: 'Agenda' },
+  { to: '/pipeline', icon: KanbanSquare, label: 'Pipeline' },
   { to: '/leads', icon: Users, label: 'Leads' },
-  { to: '/estoque', icon: Package, label: 'Estoque' },
-  { to: '/campanhas', icon: Megaphone, label: 'Campanhas' },
+  { to: '/catalogo', icon: BookImage, label: 'Catálogo' },
   { to: '/pedidos', icon: ShoppingCart, label: 'Pedidos' },
 ]
 
 const pageTitles: Record<string, string> = {
   '/': 'Agenda do Dia',
   '/dashboard': 'Dashboard',
+  '/relatorios': 'Relatórios',
   '/leads': 'Leads',
+  '/pipeline': 'Pipeline',
   '/estoque': 'Estoque',
+  '/catalogo': 'Catálogo',
   '/campanhas': 'Campanhas',
+  '/sequencias': 'Sequências',
   '/pedidos': 'Pedidos',
 }
 
@@ -61,25 +84,35 @@ export default function Layout() {
             </div>
           </div>
         </div>
-        <nav className="flex-1 py-3 px-2 space-y-0.5 overflow-auto">
-          {navItems.map(({ to, icon: Icon, label }) => (
-            <NavLink
-              key={to}
-              to={to}
-              end={to === '/'}
-              className={({ isActive }) =>
-                `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
-                  isActive ? 'bg-[#B82020] text-white' : 'text-white/60 hover:text-white hover:bg-white/10'
-                }`
-              }
-            >
-              <Icon size={15} />
-              <span>{label}</span>
-            </NavLink>
+        <nav className="flex-1 py-3 px-2 space-y-3 overflow-auto">
+          {navGroups.map((group, gi) => (
+            <div key={gi}>
+              {group.title && (
+                <div className="text-[9px] uppercase tracking-widest text-white/30 px-3 mb-1.5 font-semibold">
+                  {group.title}
+                </div>
+              )}
+              <div className="space-y-0.5">
+                {group.items.map(({ to, icon: Icon, label }) => (
+                  <NavLink
+                    key={to}
+                    to={to}
+                    end={to === '/'}
+                    className={({ isActive }) =>
+                      `flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                        isActive ? 'bg-[#B82020] text-white' : 'text-white/60 hover:text-white hover:bg-white/10'
+                      }`
+                    }
+                  >
+                    <Icon size={15} />
+                    <span>{label}</span>
+                  </NavLink>
+                ))}
+              </div>
+            </div>
           ))}
         </nav>
         <div className="px-4 py-3 border-t border-white/10 space-y-1">
-          {/* Indicador de conexão */}
           <div className="flex items-center gap-1.5">
             <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${IS_CONFIGURED ? 'bg-green-400' : 'bg-amber-400'}`} />
             <span className="text-[10px] text-white/40">
@@ -109,22 +142,33 @@ export default function Layout() {
                 <X size={18} />
               </button>
             </div>
-            <nav className="flex-1 py-3 px-2 space-y-0.5 overflow-auto">
-              {navItems.map(({ to, icon: Icon, label }) => (
-                <NavLink
-                  key={to}
-                  to={to}
-                  end={to === '/'}
-                  onClick={() => setMenuAberto(false)}
-                  className={({ isActive }) =>
-                    `flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium transition-all ${
-                      isActive ? 'bg-[#B82020] text-white' : 'text-white/60 hover:text-white hover:bg-white/10'
-                    }`
-                  }
-                >
-                  <Icon size={16} />
-                  <span>{label}</span>
-                </NavLink>
+            <nav className="flex-1 py-3 px-2 space-y-3 overflow-auto">
+              {navGroups.map((group, gi) => (
+                <div key={gi}>
+                  {group.title && (
+                    <div className="text-[9px] uppercase tracking-widest text-white/30 px-3 mb-1.5 font-semibold">
+                      {group.title}
+                    </div>
+                  )}
+                  <div className="space-y-0.5">
+                    {group.items.map(({ to, icon: Icon, label }) => (
+                      <NavLink
+                        key={to}
+                        to={to}
+                        end={to === '/'}
+                        onClick={() => setMenuAberto(false)}
+                        className={({ isActive }) =>
+                          `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                            isActive ? 'bg-[#B82020] text-white' : 'text-white/60 hover:text-white hover:bg-white/10'
+                          }`
+                        }
+                      >
+                        <Icon size={16} />
+                        <span>{label}</span>
+                      </NavLink>
+                    ))}
+                  </div>
+                </div>
               ))}
             </nav>
             <div className="px-4 py-4 border-t border-white/10 space-y-1">
