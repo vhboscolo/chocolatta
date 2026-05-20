@@ -2,6 +2,7 @@ import { supabase } from './supabase'
 import type {
   Contact, Product, Order, OrderItem, Campaign, Template, Interaction,
   TrackedLink, FollowUpSequence, FollowUpTask, SequenceStep,
+  ProspectingRun, WhatsAppTemplate, WhatsAppMessage,
 } from './supabase'
 
 // ── Contacts ──────────────────────────────────────────────
@@ -309,6 +310,120 @@ export async function fetchContactsWithCoords(): Promise<Contact[]> {
     .not('lat', 'is', null)
     .not('lng', 'is', null)
     .order('name')
+  if (error) throw error
+  return data ?? []
+}
+
+// ── Feature #9: AI prospecting ────────────────────────────────────────────
+
+export async function fetchAiQualifiedLeads(limit = 100): Promise<Contact[]> {
+  const { data, error } = await supabase
+    .from('contacts')
+    .select('*')
+    .not('lead_score', 'is', null)
+    .order('lead_score', { ascending: false })
+    .limit(limit)
+  if (error) throw error
+  return data ?? []
+}
+
+export async function updateContactAiFields(
+  id: string,
+  fields: Partial<Pick<Contact, 'lead_score' | 'ai_draft_message' | 'ai_qualified_at' | 'ai_model' | 'ai_rationale'>>,
+): Promise<void> {
+  const { error } = await supabase
+    .from('contacts')
+    .update({ ...fields, updated_at: new Date().toISOString() })
+    .eq('id', id)
+  if (error) throw error
+}
+
+export async function createProspectingRun(
+  run: Omit<ProspectingRun, 'id' | 'started_at' | 'completed_at'>,
+): Promise<ProspectingRun> {
+  const { data, error } = await supabase
+    .from('prospecting_runs')
+    .insert(run)
+    .select()
+    .single()
+  if (error) throw error
+  return data
+}
+
+export async function completeProspectingRun(
+  id: string,
+  fields: Partial<ProspectingRun>,
+): Promise<void> {
+  const { error } = await supabase
+    .from('prospecting_runs')
+    .update({ ...fields, completed_at: new Date().toISOString() })
+    .eq('id', id)
+  if (error) throw error
+}
+
+export async function fetchProspectingRuns(limit = 20): Promise<ProspectingRun[]> {
+  const { data, error } = await supabase
+    .from('prospecting_runs')
+    .select('*')
+    .order('started_at', { ascending: false })
+    .limit(limit)
+  if (error) throw error
+  return data ?? []
+}
+
+// ── Feature #10: WhatsApp templates + messages ────────────────────────────
+
+export async function fetchWhatsAppTemplates(): Promise<WhatsAppTemplate[]> {
+  const { data, error } = await supabase
+    .from('whatsapp_templates')
+    .select('*')
+    .eq('active', true)
+    .order('phase')
+  if (error) throw error
+  return data ?? []
+}
+
+export async function createWhatsAppTemplate(
+  t: Omit<WhatsAppTemplate, 'id' | 'created_at' | 'updated_at'>,
+): Promise<WhatsAppTemplate> {
+  const { data, error } = await supabase
+    .from('whatsapp_templates')
+    .insert(t)
+    .select()
+    .single()
+  if (error) throw error
+  return data
+}
+
+export async function updateWhatsAppTemplate(
+  id: string,
+  updates: Partial<WhatsAppTemplate>,
+): Promise<void> {
+  const { error } = await supabase
+    .from('whatsapp_templates')
+    .update({ ...updates, updated_at: new Date().toISOString() })
+    .eq('id', id)
+  if (error) throw error
+}
+
+export async function logWhatsAppMessage(
+  msg: Omit<WhatsAppMessage, 'id' | 'sent_at'>,
+): Promise<WhatsAppMessage> {
+  const { data, error } = await supabase
+    .from('whatsapp_messages')
+    .insert(msg)
+    .select()
+    .single()
+  if (error) throw error
+  return data
+}
+
+export async function fetchContactMessages(contactId: string): Promise<WhatsAppMessage[]> {
+  const { data, error } = await supabase
+    .from('whatsapp_messages')
+    .select('*')
+    .eq('contact_id', contactId)
+    .order('sent_at', { ascending: false })
   if (error) throw error
   return data ?? []
 }

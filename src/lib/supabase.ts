@@ -36,8 +36,61 @@ export interface Contact {
   lng?: number
   // Lead lifecycle stage (frio = never contacted)
   lead_status?: 'frio' | 'contactado' | 'interessado' | 'proposta' | 'cliente'
+  // AI prospecting fields
+  lead_score?: number          // 0-100 from LLM qualification
+  ai_draft_message?: string    // LLM-drafted first contact message
+  ai_qualified_at?: string
+  ai_model?: string
+  ai_rationale?: string
   created_at: string
   updated_at: string
+}
+
+// ── AI prospecting runs ────────────────────────────────────────────────────
+export interface ProspectingRun {
+  id: string
+  triggered_by: 'cron' | 'manual' | 'api'
+  search_query: string
+  location: string
+  apify_run_id?: string
+  apify_result_count: number
+  leads_qualified: number
+  leads_created: number
+  leads_skipped_duplicate: number
+  llm_model?: string
+  llm_tokens_used: number
+  status: 'running' | 'completed' | 'failed'
+  error_message?: string
+  started_at: string
+  completed_at?: string
+}
+
+// ── WhatsApp templates ─────────────────────────────────────────────────────
+export type WhatsAppPhase = 'frio' | 'contactado' | 'interessado' | 'proposta' | 'pos_venda' | 'aniversario'
+
+export interface WhatsAppTemplate {
+  id: string
+  name: string
+  phase: WhatsAppPhase
+  body: string
+  variables: string[]
+  description?: string
+  active: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface WhatsAppMessage {
+  id: string
+  contact_id?: string
+  direction: 'inbound' | 'outbound'
+  body: string
+  template_id?: string
+  provider: 'waha' | 'meta_cloud' | 'wa_link'
+  provider_message_id?: string
+  status: 'queued' | 'sent' | 'delivered' | 'read' | 'failed'
+  error_message?: string
+  sent_at: string
 }
 
 // ── Scrape jobs (Apify run tracking) ──────────────────────────────────────

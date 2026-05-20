@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import type {
   Contact, Product, Order, Campaign, Template, Interaction,
   FollowUpSequence, FollowUpTask, TrackedLink,
+  ProspectingRun, WhatsAppTemplate,
 } from '../lib/supabase'
 import * as db from '../lib/db'
 import {
@@ -106,6 +107,60 @@ export function useContactsWithCoords() {
     try {
       setLoading(true)
       const result = await db.fetchContactsWithCoords()
+      setData(result)
+    } catch { setData([]) }
+    finally { setLoading(false) }
+  }, [])
+  useEffect(() => { reload() }, [reload])
+  return { data, setData, loading, reload }
+}
+
+/** AI-qualified leads (lead_score not null) */
+export function useAiQualifiedLeads() {
+  const [data, setData] = useState<Contact[]>([])
+  const [loading, setLoading] = useState(IS_CONFIGURED)
+  const reload = useCallback(async () => {
+    if (!IS_CONFIGURED) {
+      setData(mockContacts.filter(c => c.lead_score != null))
+      return
+    }
+    try {
+      setLoading(true)
+      const result = await db.fetchAiQualifiedLeads()
+      setData(result)
+    } catch { setData([]) }
+    finally { setLoading(false) }
+  }, [])
+  useEffect(() => { reload() }, [reload])
+  return { data, setData, loading, reload }
+}
+
+/** Prospecting run history */
+export function useProspectingRuns() {
+  const [data, setData] = useState<ProspectingRun[]>([])
+  const [loading, setLoading] = useState(IS_CONFIGURED)
+  const reload = useCallback(async () => {
+    if (!IS_CONFIGURED) { setData([]); return }
+    try {
+      setLoading(true)
+      const result = await db.fetchProspectingRuns()
+      setData(result)
+    } catch { setData([]) }
+    finally { setLoading(false) }
+  }, [])
+  useEffect(() => { reload() }, [reload])
+  return { data, setData, loading, reload }
+}
+
+/** WhatsApp templates */
+export function useWhatsAppTemplates() {
+  const [data, setData] = useState<WhatsAppTemplate[]>([])
+  const [loading, setLoading] = useState(IS_CONFIGURED)
+  const reload = useCallback(async () => {
+    if (!IS_CONFIGURED) { setData([]); return }
+    try {
+      setLoading(true)
+      const result = await db.fetchWhatsAppTemplates()
       setData(result)
     } catch { setData([]) }
     finally { setLoading(false) }

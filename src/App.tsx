@@ -13,6 +13,8 @@ import Catalogo from './pages/Catalogo'
 import Sequencias from './pages/Sequencias'
 import Prospeccao from './pages/Prospeccao'
 import Rotas from './pages/Rotas'
+import Agente from './pages/Agente'
+import TemplatesWhatsApp from './pages/TemplatesWhatsApp'
 import ProposalView from './pages/public/ProposalView'
 import CatalogView from './pages/public/CatalogView'
 import LinkRedirect from './pages/public/LinkRedirect'
@@ -45,7 +47,9 @@ export default function App() {
           <Route path="campanhas" element={<Campanhas />} />
           <Route path="sequencias" element={<Sequencias />} />
           <Route path="prospeccao" element={<Prospeccao />} />
+          <Route path="agente" element={<Agente />} />
           <Route path="rotas" element={<Rotas />} />
+          <Route path="templates-whatsapp" element={<TemplatesWhatsApp />} />
           <Route path="pedidos" element={<Pedidos />} />
           <Route path="relatorios" element={<Relatorios />} />
         </Route>

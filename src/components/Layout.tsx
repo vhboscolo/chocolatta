@@ -3,7 +3,7 @@ import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import {
   Users, Package, Megaphone, ShoppingCart, BookImage,
   LayoutDashboard, Bell, Menu, X, CalendarCheck, KanbanSquare,
-  BarChart3, Repeat, Search, Route,
+  BarChart3, Repeat, Search, Route, Brain, MessageCircle,
 } from 'lucide-react'
 import { useProducts, IS_CONFIGURED } from '../hooks/useData'
 import { differenceInDays, parseISO } from 'date-fns'
@@ -29,7 +29,14 @@ const navGroups: { title?: string; items: { to: string; icon: any; label: string
     title: 'Prospecção',
     items: [
       { to: '/prospeccao', icon: Search, label: 'Google Maps' },
+      { to: '/agente', icon: Brain, label: 'Agente IA' },
       { to: '/rotas', icon: Route, label: 'Rotas' },
+    ],
+  },
+  {
+    title: 'Comunicação',
+    items: [
+      { to: '/templates-whatsapp', icon: MessageCircle, label: 'Templates WA' },
     ],
   },
   {
@@ -63,7 +70,9 @@ const pageTitles: Record<string, string> = {
   '/campanhas': 'Campanhas',
   '/sequencias': 'Sequências',
   '/prospeccao': 'Prospecção Google Maps',
+  '/agente': 'Agente de Prospecção IA',
   '/rotas': 'Otimização de Rotas',
+  '/templates-whatsapp': 'Templates WhatsApp',
   '/pedidos': 'Pedidos',
 }
 

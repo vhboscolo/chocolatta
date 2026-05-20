@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { Search, MapPin, Loader2, CheckCircle2, AlertTriangle, XCircle,
-  Phone, Mail, Star, Users, RefreshCw, ChevronDown, Building2 } from 'lucide-react'
+  Phone, Mail, Star, Users, RefreshCw, ChevronDown, Building2,
+  Sparkles, Brain } from 'lucide-react'
 import toast from 'react-hot-toast'
 import {
   SP_CITIES, BUSINESS_TYPES, IS_APIFY_CONFIGURED,
@@ -12,6 +13,8 @@ import { IS_CONFIGURED } from '../hooks/useData'
 import * as db from '../lib/db'
 import { mockScrapeResults } from '../lib/mockData'
 import { useContacts } from '../hooks/useData'
+import { qualifyBatch, type QualificationResult, QUALIFICATION_THRESHOLD } from '../lib/prospectingAgent'
+import { IS_LLM_CONFIGURED, LLM_MODEL } from '../lib/llm'
 
 // ─── Dedup status ─────────────────────────────────────────────────────────
 
@@ -22,6 +25,7 @@ interface ScrapeRow {
   selected: boolean
   dedup: DedupStatus
   dupContactName?: string
+  ai?: QualificationResult       // populated after "Qualificar com IA"
 }
 
 function computeDedup(
@@ -67,6 +71,45 @@ export default function Prospeccao() {
   // UI
   const [adding, setAdding] = useState(false)
   const [showTypeDropdown, setShowTypeDropdown] = useState(false)
+
+  // AI qualification
+  const [aiPhase, setAiPhase] = useState<'idle' | 'running'>('idle')
+  const [aiProgress, setAiProgress] = useState<{ done: number; total: number }>({ done: 0, total: 0 })
+
+  const handleQualifyAi = async () => {
+    if (!IS_LLM_CONFIGURED) {
+      toast.error('LLM não configurado. Adicione VITE_FIREWORKS_API_KEY ao .env.local')
+      return
+    }
+    const toQualify = rows.filter(r => r.dedup !== 'duplicate' && !r.ai).map(r => r.place)
+    if (!toQualify.length) {
+      toast('Nenhum lead novo para qualificar', { icon: 'ℹ️' })
+      return
+    }
+    setAiPhase('running')
+    setAiProgress({ done: 0, total: toQualify.length })
+    try {
+      const results = await qualifyBatch(toQualify, (done, total) => setAiProgress({ done, total }))
+      setRows(prev =>
+        prev.map(r => {
+          const ai = results.get(r.place.title)
+          if (!ai) return r
+          // Auto-select if qualified (and not duplicate)
+          return {
+            ...r,
+            ai,
+            selected: r.dedup !== 'duplicate' && ai.qualified,
+          }
+        }),
+      )
+      const qualified = Array.from(results.values()).filter(r => r.qualified).length
+      toast.success(`${qualified} de ${results.size} leads qualificados pela IA`)
+    } catch (e) {
+      toast.error(`Erro na qualificação IA: ${(e as Error).message}`)
+    } finally {
+      setAiPhase('idle')
+    }
+  }
 
   // Poll Apify run status
   const stopPolling = useCallback(() => {
@@ -156,7 +199,7 @@ export default function Prospeccao() {
 
     setAdding(true)
     try {
-      const contacts = selected.map(({ place }) => ({
+      const contacts = selected.map(({ place, ai }) => ({
         name: place.title,
         phone: place.phone ?? undefined,
         email: place.email ?? undefined,
@@ -166,6 +209,7 @@ export default function Prospeccao() {
           place.website ? `Site: ${place.website}` : null,
           place.totalScore ? `Avaliação Google: ${place.totalScore}★ (${place.reviewsCount ?? 0} avaliações)` : null,
           place.categories?.length ? `Categoria: ${place.categories.join(', ')}` : null,
+          ai?.rationale ? `IA: ${ai.rationale}` : null,
         ].filter(Boolean).join('\n'),
         segment: place.categories?.[0] ?? 'Alimentação',
         status: 'ativo',
@@ -173,6 +217,11 @@ export default function Prospeccao() {
         lead_status: 'frio' as const,
         lat: normalizeLat(place),
         lng: normalizeLng(place),
+        lead_score: ai?.score,
+        ai_draft_message: ai?.draftMessage,
+        ai_rationale: ai?.rationale,
+        ai_qualified_at: ai ? new Date().toISOString() : undefined,
+        ai_model: ai ? LLM_MODEL : undefined,
       }))
 
       if (IS_CONFIGURED) {
@@ -352,12 +401,26 @@ export default function Prospeccao() {
                 </div>
               </div>
             </div>
-            <button
-              onClick={toggleAll}
-              className="text-xs text-gray-500 hover:text-gray-700 underline"
-            >
-              {rows.some(r => r.selected) ? 'Desmarcar todos' : 'Selecionar todos'}
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleQualifyAi}
+                disabled={aiPhase === 'running' || rows.every(r => r.ai || r.dedup === 'duplicate')}
+                className="flex items-center gap-1.5 text-xs bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold px-3 py-1.5 rounded-full transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                title={IS_LLM_CONFIGURED ? 'Pontuar e gerar mensagens com Kimi K2.6' : 'LLM não configurado'}
+              >
+                {aiPhase === 'running' ? (
+                  <><Loader2 size={11} className="animate-spin" /> {aiProgress.done}/{aiProgress.total}</>
+                ) : (
+                  <><Sparkles size={11} /> Qualificar com IA</>
+                )}
+              </button>
+              <button
+                onClick={toggleAll}
+                className="text-xs text-gray-500 hover:text-gray-700 underline"
+              >
+                {rows.some(r => r.selected) ? 'Desmarcar todos' : 'Selecionar todos'}
+              </button>
+            </div>
           </div>
 
           {/* Dedup legend */}
@@ -370,7 +433,7 @@ export default function Prospeccao() {
           {/* Rows */}
           <div className="divide-y divide-gray-100">
             {rows.map((row, idx) => {
-              const { place, selected, dedup, dupContactName } = row
+              const { place, selected, dedup, dupContactName, ai } = row
               const dedupColor =
                 dedup === 'clean' ? 'border-green-200 bg-green-50/40'
                 : dedup === 'similar' ? 'border-amber-200 bg-amber-50/40'
@@ -394,6 +457,19 @@ export default function Prospeccao() {
                         {place.title}
                       </div>
                       <div className="flex items-center gap-1 flex-shrink-0">
+                        {ai && (
+                          <span
+                            title={ai.rationale}
+                            className={`flex items-center gap-0.5 text-[10px] font-bold px-1.5 py-0.5 rounded-full border ${
+                              ai.score >= QUALIFICATION_THRESHOLD
+                                ? 'bg-purple-50 text-purple-700 border-purple-200'
+                                : 'bg-gray-50 text-gray-500 border-gray-200'
+                            }`}
+                          >
+                            <Brain size={10} />
+                            IA {ai.score}
+                          </span>
+                        )}
                         {place.totalScore && (
                           <span className="flex items-center gap-0.5 text-xs text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-full border border-amber-200">
                             <Star size={10} fill="currentColor" />
@@ -435,6 +511,26 @@ export default function Prospeccao() {
                         {dedup === 'duplicate'
                           ? `Duplicata de "${dupContactName}" — não será importado`
                           : `Similar a "${dupContactName}" no CRM`}
+                      </div>
+                    )}
+
+                    {/* AI rationale + draft preview */}
+                    {ai && (
+                      <div className="mt-2 p-2 bg-purple-50/40 border border-purple-100 rounded-lg space-y-1">
+                        <div className="text-[10px] text-purple-700 italic flex items-start gap-1">
+                          <Brain size={10} className="flex-shrink-0 mt-0.5" />
+                          <span>{ai.rationale}</span>
+                        </div>
+                        {ai.draftMessage && (
+                          <details className="mt-1">
+                            <summary className="text-[10px] font-semibold text-purple-700 cursor-pointer hover:underline">
+                              Ver mensagem gerada pela IA →
+                            </summary>
+                            <div className="mt-1 p-2 bg-white border border-purple-100 rounded text-[11px] text-gray-700 whitespace-pre-wrap">
+                              {ai.draftMessage}
+                            </div>
+                          </details>
+                        )}
                       </div>
                     )}
                   </div>
